@@ -4,5 +4,6 @@ channels:
   - nodefaults
 dependencies:
   - pandas
+  - awscli
   - entrez-direct
   - singularity
