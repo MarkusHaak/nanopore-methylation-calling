@@ -1,0 +1,11 @@
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - meme =5.5.5
+  - prodigal
+  - hmmer
+  - blast
+  - cath-tools
+  - ont-modkit

@@ -1,0 +1,11 @@
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - conda-forge::libuuid >=1.0.3
+  - python =3.7
+  - ont-fast5-api
+  - pip
+  - pip:
+    - snapper-ont

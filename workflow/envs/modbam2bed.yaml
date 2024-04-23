@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - bioconda
+  - epi2melabs
+  - nodefaults
+dependencies:
+  - epi2melabs::modbam2bed
