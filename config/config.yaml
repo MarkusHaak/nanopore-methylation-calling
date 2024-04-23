@@ -2,8 +2,8 @@ version: 0.0.1
 
 datasets_dir: resources/datasets #without trailing slash
 
-datasets: ../all_datasets.csv
-ssh_servers: ../ssh_servers.csv
+datasets: ../../all_datasets.csv
+ssh_servers: ../../ssh_servers.csv
 
 dorado_version: 0.6.0-linux-x64
 guppy_version: 6.3.2_linux64
