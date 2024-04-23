@@ -22,7 +22,7 @@ conda:
 configfile: "config/config.yaml"
 
 DATASETS = (
-    pd.read_csv(config["samples"])
+    pd.read_csv(config["datasets"])
     .set_index("sample_name", drop=False)
     .sort_index()
 )
