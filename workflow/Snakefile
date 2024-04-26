@@ -274,44 +274,10 @@ def find_any_file(wildcards, filetype=".fast5", d=None):
     else:
         return "missing"
 
-#rule extract_fast5_meta:
-#    input:
-#        #lambda wildcards: find_any_file(wildcards, filetype=".fast5")
-#        f"resources/datasets/{config['sample']}/NAT_raw"
-#    output:
-#        #f"results/{config['sample']}/metadata_fast5.yaml"
-#        f"results/{config['sample']}/metadata.yaml",
-#        f"results/{config['sample']}/raw_dtype.txt"
-#    params:
-#        any_fast5 = lambda wildcards: find_any_file(wildcards, filetype=".fast5")
-#    conda:
-#        "envs/fast5api.yaml"
-#    script:
-#        "scripts/extract_fast5_meta.py"
-#
-#rule extract_pod5_meta:
-#    input:
-#        #lambda wildcards: glob.glob(f"{config['datasets_dir']}/{config['sample']}/**/*.pod5")[0]
-#        #lambda wildcards: find_any_file(wildcards, filetype=".pod5")
-#        f"resources/datasets/{config['sample']}/NAT_raw"
-#    output:
-#        #f"results/{config['sample']}/metadata_pod5.yaml"
-#        f"results/{config['sample']}/metadata.yaml",
-#        f"results/{config['sample']}/raw_dtype.txt"
-#    params:
-#        any_pod5 = lambda wildcards: find_any_file(wildcards, filetype=".pod5")
-#    conda:
-#        "envs/pod5.yaml"
-#    shell:
-#        "mkdir -p results/{config[sample]} && pod5 inspect debug {params.any_pod5} | grep -v ',' > {output[0]} && echo pod5 > {output[1]}"
-
 rule extract_meta:
     input:
-        #lambda wildcards: glob.glob(f"{config['datasets_dir']}/{config['sample']}/**/*.pod5")[0]
-        #lambda wildcards: find_any_file(wildcards, filetype=".pod5")
         f"resources/datasets/{config['sample']}/NAT_raw"
     output:
-        #f"results/{config['sample']}/metadata_pod5.yaml"
         f"results/{config['sample']}/metadata.yaml",
         f"results/{config['sample']}/raw_dtype.txt"
     params:
@@ -321,11 +287,6 @@ rule extract_meta:
         "envs/meta.yaml"
     script:
         "scripts/extract_meta.py"
-    #run:
-    #    if f"{params.any_pod5}" != "missing":
-    #        shell(f"mkdir -p results/{config[sample]} && pod5 inspect debug {params.any_pod5} | grep -v ',' > {output[0]} && echo pod5 > {output[1]}")
-    #    elif f"{params.any_fast5}" != "missing":
-    #        script("scripts/extract_fast5_meta.py")
 
 #checkpoint choose_pipeline:
 rule choose_pipeline:
@@ -666,12 +627,6 @@ rule prokka:
         prokka --outdir {output.outdir} --force --cpus {threads} {input} > {log}
         """)
 
-#def guppy_fastq_path(wildcards):
-#    if wildcards.raw_set == 'NAT':
-#        return f"results/{config['sample']}/{wildcards.raw_set}_guppy_modified/pass/"
-#    else:
-#        return f"results/{config['sample']}/{wildcards.raw_set}_guppy_canonical/pass/"
-
 rule map_guppy_calls:
     input:
         fastq = f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/pass/",
@@ -725,47 +680,6 @@ rule samtools_index:
         "envs/samtools.yaml"
     shell:
         "samtools index {input}"
-
-#rule genomecov_from_bam_dorado:
-#    input:
-#        f"results/{config['sample']}/dorado.mapped.sorted.bam"
-#    output:
-#        f"results/{config['sample']}/reference.genomecov"
-#    #wildcard_constraints:
-#    #    fn="[^/]"
-#    log:
-#        f"results/{config['sample']}/genomecov_bam.log"
-#    params:
-#        "-d -split" #"-bg"  # optional parameters
-#    wrapper:
-#        "v3.7.0/bio/bedtools/genomecov"
-#
-#rule genomecov_from_bam_guppy:
-#    input:
-#        f"results/{config['sample']}/guppy.mapped.sorted.bam"
-#    output:
-#        f"results/{config['sample']}/reference.genomecov"
-#    #wildcard_constraints:
-#    #    fn="[^/]"
-#    log:
-#        f"results/{config['sample']}/genomecov_bam.log"
-#    params:
-#        "-d -split" #"-bg"  # optional parameters
-#    wrapper:
-#        "v3.7.0/bio/bedtools/genomecov"
-
-#def choose_bam_input(wildcards):
-#    # decision based on content of output file
-#    # Important: use the method open() of the returned file!
-#    # This way, Snakemake is able to automatically download the file if it is generated in
-#    # a cloud environment without a shared filesystem.
-#    with checkpoints.choose_pipeline.get().output[1].open() as f:
-#        content = f.read().strip()
-#        #print(content)
-#        if content.startswith('r9'):
-#            return f"results/{config['sample']}/{wildcards.raw_set}_guppy.mapped.sorted.bam"
-#        else:
-#            return f"results/{config['sample']}/dorado_{wildcards.raw_set.split("_")[0]}.mapped.sorted.bam"
 
 rule nanoplot:
     input:
@@ -1158,29 +1072,6 @@ rule snapper:
         echo $runtime > {output.runtime}
         """)
 
-#rule transfer:
-#    input:
-#        f"results/{config['sample']}/"
-#    output:
-#        f"results/{config['sample']}/transferred.txt"
-#    threads:
-#        10000
-#    priority:
-#        -1
-#    params:
-#        identity = SSH_SERVERS.loc[config['backup_alias'], 'identity'],
-#        port = SSH_SERVERS.loc[config['backup_alias'], 'port'],
-#        user = SSH_SERVERS.loc[config['backup_alias'], 'user'],
-#        address = SSH_SERVERS.loc[config['backup_alias'], 'address'],
-#        target_dir = config['backup_dir']
-#    shell:
-#        ("""
-#        rsync -av -e "ssh -i {params.identity} -p {params.port}" {input} {params.user}@{params.address}:{params.target_dir}/{input}
-#        if [ "$?" -eq "0" ] ; then
-#            ls -lR {input} > {output}
-#        fi
-#        """)
-
 rule nanodisco_preprocess:
     input:
         nat_fast5 = f"results/{config['sample']}/NAT_guppy_canonical/gzip/",
@@ -1197,11 +1088,6 @@ rule nanodisco_preprocess:
         config['threads_nanodisco']
     singularity:
         "library://fanglab/default/nanodisco"
-    #params:
-    #    preprocessed = temp(directory(f"results/{config['sample']}/nanodisco/preprocessed/")),
-    #    difference_dir = temp(directory(f"results/{config['sample']}/nanodisco/difference/")),
-    #    analysis_dir = directory(f"results/{config['sample']}/nanodisco/analysis/"),
-    #    tmp_dir = temp(directory(f"results/{config['sample']}/nanodisco/tmp/"))
     shell:
         ("""
         start=`date +%s`

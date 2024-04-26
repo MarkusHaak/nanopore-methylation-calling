@@ -21,26 +21,14 @@ def get_guppy_config_name(metadata_fn, guppy_workflows_fn):
                 raise ValueError("Unexcepted number of inputs")
     df = pd.DataFrame(data, columns=columns)
     
-    try:
-        with open(metadata_fn, 'r') as f:
-            meta = yaml.safe_load(f)
-        flowcell = meta.get('flow_cell_product_code', None)
-        sequencing_kit = meta.get('sequencing_kit', None)
-        if flowcell is None:
-            print("WARNING: flow_cell_product_code field missing in fast5 (--> v2.0), assuming FLO-MIN106")
-            flowcell = "FLO-MIN106"
-    except:
-        with open(metadata_fn, 'r') as f:
-            flowcell, sequencing_kit = None, None
-            for line in f.readlines():
-                if "sequencing_kit" in line:
-                    match = re.search('sequencing_kit: ([^ ]+)[ ]*\n', line)
-                    if match is not None:
-                        sequencing_kit = match.group(1)
-                if "flow_cell_product_code" in line:
-                    match = re.search('flow_cell_product_code: ([^ ]+)[ ]*\n', line)
-                    if match is not None:
-                        flowcell = match.group(1)
+    with open(metadata_fn, 'r') as f:
+        meta = yaml.safe_load(f)
+    flowcell = meta.get('flow_cell_product_code', None)
+    sequencing_kit = meta.get('sequencing_kit', None)
+    if flowcell is None:
+        print("WARNING: flow_cell_product_code field missing in fast5 (--> v2.0), assuming FLO-MIN106")
+        flowcell = "FLO-MIN106"
+    
     if flowcell is None:
         raise ValueError("ERROR: flowcell not found in meta data")
         #flowcell = "FLO-MIN106"
