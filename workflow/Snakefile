@@ -40,7 +40,7 @@ rule all:
         # general 
         f"results/{config['sample']}/workflow_version.txt",
         # run general statistics and annotation
-        f"results/{config['sample']}/prokka"
+        f"results/{config['sample']}/prokka",
         # r10.x
         expand(f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]),
         expand(f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]),
@@ -769,11 +769,13 @@ rule samtools_index:
 
 rule nanoplot:
     input:
-        f"results/{config['sample']}/nanoplot/{{tool_set_model}}.mapped.sorted.bam"
+        f"results/{config['sample']}/{{tool_set_model}}.mapped.sorted.bam"
     output:
         outdir = directory(f"results/{config['sample']}/nanoplot/{{tool_set_model}}/")
     log:
         f"results/{config['sample']}/nanoplot/{{tool_set_model}}/stdout.txt"
+    wildcard_constraints:
+        tool_set_model=r"\w+"
     conda:
         "envs/nanoplot.yaml"
     threads: config['threads']
@@ -788,10 +790,10 @@ rule genomecov_from_bam:
         f"results/{config['sample']}/{{tool_set_model}}.mapped.sorted.bam"
     output:
         f"results/{config['sample']}/{{tool_set_model}}.genomecov"
-    #wildcard_constraints:
-    #    fn="[^/]"
     log:
         f"results/{config['sample']}/{{tool_set_model}}.log"
+    wildcard_constraints:
+        tool_set_model=r"\w+"
     params:
         "-d -split" #"-bg"  # optional parameters
     wrapper:
@@ -802,6 +804,8 @@ rule contigcov:
         f"results/{config['sample']}/{{tool_set_model}}.genomecov"
     output:
         f"results/{config['sample']}/{{tool_set_model}}.contig_depth.csv"
+    wildcard_constraints:
+        tool_set_model=r"\w+"
     run:
         import pandas as pd
         df = pd.read_csv(f"{input}", sep="\t", header=None, names=['contig', 'pos', 'cov'])

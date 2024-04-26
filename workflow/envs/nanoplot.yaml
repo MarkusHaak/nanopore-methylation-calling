@@ -1,6 +1,6 @@
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - nodefaults
 dependencies:
-  - nanoplot =1.42.0
+  - bioconda::nanoplot =1.42.0

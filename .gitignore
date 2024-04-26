@@ -11,5 +11,5 @@ results/**
 unexpected_tombo_errors*
 *.pdf
 *.pyc
-*core-dump-dbs
+*core-dump-db/
 __pycache__/
