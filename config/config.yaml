@@ -1,11 +1,11 @@
-version: 0.2.0
+version: 0.2.1
 
 datasets_dir: resources/datasets #without trailing slash
 
 datasets: ../../all_datasets.csv
 ssh_servers: ../../ssh_servers.csv
 
-dorado_version: 0.6.0-linux-x64
+dorado_version: 0.6.1-linux-x64
 guppy_version: 6.3.2_linux64
 
 contig_coverages: [1, 5, 10, 20, 30, 40, 50]
