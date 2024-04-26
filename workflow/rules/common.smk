@@ -5,7 +5,27 @@ rule copy_version:
     #    with open(f"{output}", "w") as f:
     #        print(config['version'], file=f)
     shell:
-        ("echo {config[version]} > {output}")
+        ("""
+        mkdir -p results/{config[sample]}
+        echo {config[version]} > {output}
+        """)
+
+rule export_command:
+    output:
+        f"results/{config['sample']}/workflow_command.txt"
+    params:
+        command = " ".join(sys.argv)
+    shell:
+        ("""
+        mkdir -p results/{config[sample]}
+        echo ${params.command} > {output}
+        """)
+
+rule export_config:
+    output:
+        f"results/{config['sample']}/workflow_config.yaml"
+    script:
+        "../scripts/write_config_to_file.py"
 
 rule extract_meta:
     input:

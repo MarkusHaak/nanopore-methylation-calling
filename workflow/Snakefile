@@ -1,4 +1,4 @@
-import os, glob
+import os, sys, glob
 import re
 import pandas as pd
 from snakemake.utils import min_version
@@ -136,23 +136,21 @@ def get_raw_dir(wildcards):
 
 rule all:
     input:
-        (
+        f"results/{config['sample']}/workflow_command.txt",
         f"results/{config['sample']}/workflow_version.txt",
+        f"results/{config['sample']}/workflow_config.yaml",
+        f"results/{config['sample']}/dataset_entry.yaml",
         f"results/{config['sample']}/success.r10.txt",
         f"results/{config['sample']}/success.r9.txt",
-        #f"results/{config['sample']}/success.r9_comparative.txt"
-        )
+        f"results/{config['sample']}/success.r10_comparative.txt",
+        f"results/{config['sample']}/success.r9_comparative.txt"
 
 rule r10_analysis:
     input:
         f"results/{config['sample']}/starttime.txt",
         f"results/{config['sample']}/prokka",
-        expand(
-        f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]
-        ),
-        expand(
-        f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]
-        ),
+        f"results/{config['sample']}/NAT_dorado.contig_depth.csv",
+        f"results/{config['sample']}/nanoplot/NAT_dorado/",
         f"results/{config['sample']}/MicrobeMod/NAT_dorado.rm.genes.tsv",
         f"results/{config['sample']}/MicrobeMod/NAT_dorado.motifs.tsv",
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.auto_filter.bed",
@@ -173,12 +171,8 @@ rule r9_analysis:
     input:
         f"results/{config['sample']}/starttime.txt",
         f"results/{config['sample']}/prokka",
-        expand(
-        f"results/{config['sample']}/{{raw_set}}_guppy_canonical.contig_depth.csv", raw_set=["NAT", "WGA"]
-        ),
-        expand(
-        f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]
-        ),
+        f"results/{config['sample']}/NAT_guppy_canonical.contig_depth.csv",
+        f"results/{config['sample']}/nanoplot/NAT_guppy_canonical/",
         f"results/{config['sample']}/MicrobeMod/NAT_guppy_canonical.rm.genes.tsv",
         f"results/{config['sample']}/tombo/alt.runtime.txt",
         f"results/{config['sample']}/tombo/de_novo.runtime.txt",
@@ -197,9 +191,35 @@ rule r9_analysis:
         echo $runtime > results/{config[sample]}/total_runtime.txt"
         """)
 
+rule r10_comparative_analysis:
+    input:
+        f"results/{config['sample']}/starttime.txt",
+        expand(
+        f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]
+        ),
+        expand(
+        f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]
+        ),
+    output:
+        success = f"results/{config['sample']}/success.r10_comparative.txt"
+    shell:
+        ("""
+        touch {output.success}
+        start=$(cat {input[0]})
+        end=`date +%s`
+        runtime=$((end-start))
+        echo $runtime > results/{config[sample]}/total_runtime.txt"
+        """)
+
 rule r9_comparative_analysis:
     input:
         f"results/{config['sample']}/starttime.txt",
+        expand(
+        f"results/{config['sample']}/{{raw_set}}_guppy_canonical.contig_depth.csv", raw_set=["NAT", "WGA"]
+        ),
+        expand(
+        f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]
+        ),
         f"results/{config['sample']}/snapper/",
         f"results/{config['sample']}/nanodisco/difference/",
         f"results/{config['sample']}/tombo/compare.runtime.txt",
@@ -333,3 +353,16 @@ rule download_reference:
                 mkdir -p {output}
                 esearch -db nuccore -query "{params.source}" | efetch -format fasta > "{output}/{params.source}.fasta"
                 """)
+
+rule export_dataset_entry:
+    output:
+        f"results/{config['sample']}/dataset_entry.yaml"
+    params:
+        ds_entry = DATASETS.loc[config['sample']].to_dict()
+    run:
+        import os, yaml
+        os.makedirs(os.path.dirname(f"{output}"), exist_ok=True)
+        with open(f"{output}", 'w+') as ff:
+            yaml.dump(params.ds_entry, ff)
+        
+
