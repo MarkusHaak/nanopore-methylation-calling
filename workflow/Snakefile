@@ -220,8 +220,8 @@ rule r9_comparative_analysis:
         expand(
         f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]
         ),
-        f"results/{config['sample']}/snapper/",
-        f"results/{config['sample']}/nanodisco/difference/",
+        #f"results/{config['sample']}/snapper/",
+        #f"results/{config['sample']}/nanodisco/difference/",
         f"results/{config['sample']}/tombo/compare.runtime.txt",
     output:
         success = f"results/{config['sample']}/success.r9_comparative.txt"
