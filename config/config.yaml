@@ -1,4 +1,4 @@
-version: 0.2.1
+version: 0.2.2
 
 datasets_dir: resources/datasets #without trailing slash
 
@@ -22,6 +22,8 @@ retries: 1
 
 backup_alias: backup
 backup_dir: /vol/data/
+
+tombo_per_read_stats: false
 
 models:
     'r10.4.1':

@@ -39,12 +39,14 @@ rule tombo_de_novo:
     threads: config['threads']
     resources:
         tombo = 1
+    params:
+        per_read_stats = "--per-read-statistics-basename  results/{config[sample]}/tombo/de_novo" if config['tombo_per_read_stats'] else ""
     shell:
         ("""
         start=`date +%s`
         mkdir -p results/{config[sample]}/tombo/
         tombo detect_modifications de_novo --fast5-basedirs {input.single_fast5_dir} \
-            --statistics-file-basename results/{config[sample]}/tombo/de_novo \
+            --statistics-file-basename results/{config[sample]}/tombo/de_novo {params.per_read_stats} \
             --processes {threads}
         tombo text_output browser_files \
             --fast5-basedirs {input.single_fast5_dir} \
@@ -71,6 +73,8 @@ rule tombo_alternative_model:
     threads: config['threads']
     resources:
         tombo = 1
+    params:
+        per_read_stats = "--per-read-statistics-basename  results/{config[sample]}/tombo/alt" if config['tombo_per_read_stats'] else ""
     shell:
         ("""
         start=`date +%s`
@@ -78,7 +82,7 @@ rule tombo_alternative_model:
         for mod in 6mA 5mC ; do
             tombo detect_modifications alternative_model --alternate-bases $mod \
                 --fast5-basedirs {input.single_fast5_dir} \
-                --statistics-file-basename results/{config[sample]}/tombo/alt \
+                --statistics-file-basename results/{config[sample]}/tombo/alt {params.per_read_stats} \
                 --processes {threads}
             tombo text_output browser_files \
                 --fast5-basedirs {input.single_fast5_dir} \
@@ -108,6 +112,8 @@ rule tombo_model_sample_compare:
     threads: config['threads']
     resources:
         tombo = 1
+    params:
+        per_read_stats = "--per-read-statistics-basename  results/{config[sample]}/tombo/compare" if config['tombo_per_read_stats'] else ""
     shell:
         ("""
         start=`date +%s`
@@ -115,7 +121,7 @@ rule tombo_model_sample_compare:
         tombo detect_modifications model_sample_compare \
             --fast5-basedirs {input.NAT_single_fast5_dir} \
             --control-fast5-basedirs {input.wga_single_fast5_dir} \
-            --statistics-file-basename results/{config[sample]}/tombo/compare \
+            --statistics-file-basename results/{config[sample]}/tombo/compare {params.per_read_stats} \
             --processes {threads}
         tombo text_output browser_files \
             --fast5-basedirs {input.NAT_single_fast5_dir} \
