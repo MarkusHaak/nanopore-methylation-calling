@@ -36,23 +36,25 @@ def get_guppy_config_name(metadata_fn, guppy_workflows_fn):
         
         raise ValueError(f"WARNING: unknown flowcell {flowcell}")
         #flowcell = "FLO-MIN106"
+    kit_known = True
     if sequencing_kit is None:
         print("WARNING: kit not found in meta data")
     elif (df.kit == sequencing_kit.upper()).sum() == 0:
         print(f"WARNING: unknown kit {sequencing_kit.upper()}")
+        kit_known = False
 
     print(f"Deduced: Flowcell: {flowcell}, kit: {sequencing_kit}")
 
-    if sequencing_kit:
+    if sequencing_kit and kit_known:
         d = df.loc[(df.flowcell == flowcell.upper()) & (df.kit == sequencing_kit.upper()) & (df.config_name.str.startswith('dna'))]
     else:
         d = df.loc[(df.flowcell == flowcell.upper()) & (df.config_name.str.startswith('dna'))]
+        print(f"WARNING: sequencing kit missing or unknown, slect first config for flowcell {flowcell}")
     if len(d) > 0:
         # return first entry if multiple match
         return d.iloc[0]['config_name']
     elif len(d) == 0:
-        raise ValueError(f"Combination of flowcell {flowcell} and kit {sequencing_kit} not listed in Guppy workflows")
-    
+        raise ValueError(f"No configs for flowcell {flowcell} (and kit {sequencing_kit}) listed in Guppy workflows")
     return d['config_name']
 
 def config_name_to_pore(config_name):
