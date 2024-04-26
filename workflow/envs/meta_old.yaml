@@ -3,6 +3,9 @@ channels:
   - bioconda
   - nodefaults
 dependencies:
+  - python =3.7
+  - h5py <3.2
+  - ont-fast5-api
   - pip =24.0
   - pip:
     - pod5==0.3.10

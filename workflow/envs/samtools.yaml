@@ -4,4 +4,4 @@ channels:
   - nodefaults
 dependencies:
   - ncurses
-  - samtools >=1.16
+  - samtools =1.20

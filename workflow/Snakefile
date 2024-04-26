@@ -39,11 +39,14 @@ rule all:
         f"results/{config['sample']}/nanodisco/preprocess_runtime.txt",
         # general 
         f"results/{config['sample']}/workflow_version.txt",
-        # run statistics
+        # run general statistics and annotation
+        f"results/{config['sample']}/prokka"
         # r10.x
         expand(f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]),
+        expand(f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]),
         # r9.x
         expand(f"results/{config['sample']}/{{raw_set}}_guppy_canonical.contig_depth.csv", raw_set=["NAT", "WGA"]),
+        expand(f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]),
         # r10.x samples
         f"results/{config['sample']}/MicrobeMod/mm_motifs.tsv",
         f"results/{config['sample']}/MicrobeMod/mm.rm.genes.tsv",
@@ -647,6 +650,22 @@ rule find_reference:
             print(fns[0], file=f)
         shutil.copyfile(fns[0], f"{output.ref}")
 
+rule prokka:
+    input:
+        f"results/{config['sample']}/reference.fasta"
+    output:
+        outdir = directory(f"results/{config['sample']}/prokka")
+    log:
+        f"results/{config['sample']}/prokka/stdout.txt"
+    conda:
+        "envs/prokka.yaml"
+    threads: config['threads']
+    shell:
+        ("""
+        mkdir -p {output.outdir}
+        prokka --outdir {output.outdir} --force --cpus {threads} {input} > {log}
+        """)
+
 #def guppy_fastq_path(wildcards):
 #    if wildcards.raw_set == 'NAT':
 #        return f"results/{config['sample']}/{wildcards.raw_set}_guppy_modified/pass/"
@@ -747,6 +766,22 @@ rule samtools_index:
 #            return f"results/{config['sample']}/{wildcards.raw_set}_guppy.mapped.sorted.bam"
 #        else:
 #            return f"results/{config['sample']}/dorado_{wildcards.raw_set.split("_")[0]}.mapped.sorted.bam"
+
+rule nanoplot:
+    input:
+        f"results/{config['sample']}/nanoplot/{{tool_set_model}}.mapped.sorted.bam"
+    output:
+        outdir = directory(f"results/{config['sample']}/nanoplot/{{tool_set_model}}/")
+    log:
+        f"results/{config['sample']}/nanoplot/{{tool_set_model}}/stdout.txt"
+    conda:
+        "envs/nanoplot.yaml"
+    threads: config['threads']
+    shell:
+        ("""
+        mkdir -p {output.outdir}
+        NanoPlot -t {threads} --bam {input} -o {output.outdir} > {log}
+        """)
 
 rule genomecov_from_bam:
     input:

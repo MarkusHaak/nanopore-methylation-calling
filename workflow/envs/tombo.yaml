@@ -6,5 +6,5 @@ dependencies:
   - conda-forge::libuuid >=1.0.3
   - python =3.7
   - numpy =1.19
-  - ont-fast5-api
+  - ont-fast5-api =4.1.3
   - ont-tombo =1.5.1

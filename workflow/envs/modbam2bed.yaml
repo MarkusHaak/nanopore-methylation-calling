@@ -4,4 +4,4 @@ channels:
   - epi2melabs
   - nodefaults
 dependencies:
-  - epi2melabs::modbam2bed
+  - epi2melabs::modbam2bed =0.9.4

@@ -10,3 +10,6 @@ results/**
 .snakemake/**
 unexpected_tombo_errors*
 *.pdf
+*.pyc
+*core-dump-dbs
+__pycache__/

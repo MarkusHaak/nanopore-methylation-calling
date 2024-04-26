@@ -4,8 +4,8 @@ channels:
   - nodefaults
 dependencies:
   - meme =5.5.5
-  - prodigal
-  - hmmer
-  - blast
-  - cath-tools
-  - ont-modkit
+  - prodigal =2.6.3
+  - hmmer =3.4
+  - blast =2.15.0
+  - cath-tools =0.16.5
+  - ont-modkit =0.2.7

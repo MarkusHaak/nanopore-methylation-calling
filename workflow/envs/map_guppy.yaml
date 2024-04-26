@@ -4,5 +4,5 @@ channels:
   - nodefaults
 dependencies:
   - ncurses
-  - samtools >=1.16
-  - minimap2
+  - samtools =1.20
+  - minimap2 =2.28
