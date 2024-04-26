@@ -33,238 +33,6 @@ SSH_SERVERS = (
     .sort_index()
 )
 
-rule all:
-    input:
-        (
-        f"results/{config['sample']}/nanodisco/preprocess_runtime.txt",
-        # general 
-        f"results/{config['sample']}/workflow_version.txt",
-        # run general statistics and annotation
-        f"results/{config['sample']}/prokka",
-        # r10.x
-        expand(f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]),
-        expand(f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]),
-        # r9.x
-        expand(f"results/{config['sample']}/{{raw_set}}_guppy_canonical.contig_depth.csv", raw_set=["NAT", "WGA"]),
-        expand(f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]),
-        # r10.x samples
-        f"results/{config['sample']}/MicrobeMod/mm_motifs.tsv",
-        f"results/{config['sample']}/MicrobeMod/mm.rm.genes.tsv",
-        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.auto_filter.bed",
-        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.fixed_filter.bed",
-        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.no_filter.bed",
-        # r9.x
-        f"results/{config['sample']}/tombo/alt.runtime.txt",
-        f"results/{config['sample']}/tombo/de_novo.runtime.txt",
-        f"results/{config['sample']}/modbam2bed/NAT_guppy_modified.modbam2bed.bed",
-        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.auto_filter.bed",
-        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.fixed_filter.bed",
-        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.no_filter.bed",
-        # r9.x comparison samples
-        f"results/{config['sample']}/snapper/",
-        f"results/{config['sample']}/nanodisco/preprocess_runtime.txt",
-        f"results/{config['sample']}/nanodisco/difference/",
-        f"results/{config['sample']}/tombo/compare.runtime.txt",
-        )
-        
-
-rule copy_version:
-    output:
-        f"results/{config['sample']}/workflow_version.txt"
-    run:
-        with open(f"{output}", "w") as f:
-            print(config['version'], file=f)
-
-rule download_dorado:
-    output:
-        temp(f"resources/dorado-{config['dorado_version']}.tar.gz")
-    shell:
-        "wget -P resources/ https://cdn.oxfordnanoportal.com/software/analysis/dorado-{config[dorado_version]}.tar.gz"
-
-rule extract_dorado:
-    input:
-        f"resources/dorado-{config['dorado_version']}.tar.gz"
-    output:
-        f"resources/dorado-{config['dorado_version']}/bin/dorado"
-    #cache:
-    #    True
-    shell:
-        "tar -xzf {input} -C resources/"
-
-rule download_guppy:
-    output:
-        temp(f"resources/ont-guppy_{config['guppy_version']}.tar.gz")
-    shell:
-        "wget -P resources/ https://cdn.oxfordnanoportal.com/software/analysis/ont-guppy_{config[guppy_version]}.tar.gz"
-
-rule extract_guppy:
-    input:
-        f"resources/ont-guppy_{config['guppy_version']}.tar.gz"
-    output:
-        f"resources/ont-guppy/bin/guppy_basecaller"
-    #cache:
-    #    True
-    shell:
-        "tar -xzf {input} -C resources/"
-
-rule export_guppy_workflows:
-    input:
-        "resources/ont-guppy/bin/guppy_basecaller"
-    output:
-        "resources/guppy_workflows.csv"
-    shell:
-        ("""
-        {input} --print_workflows > {output}
-        """)
-
-rule clone_rerio:
-    output:
-        "resources/rerio/download_model.py"
-    shell:
-        "git clone https://github.com/nanoporetech/rerio.git resources/rerio"
-
-rule download_dorado_models:
-    input:
-        f"resources/dorado-{config['dorado_version']}/bin/dorado"
-    output:
-        directory("resources/dorado_models/{model}/")
-    shell:
-        "mkdir -p resources/dorado_models && resources/dorado-{config[dorado_version]}/bin/dorado download --model {wildcards.model} --directory resources/dorado_models/"
-
-rule download_rerio_dorado_models:
-    input:
-        "resources/rerio/download_model.py"
-    output:
-        directory("resources/rerio/dorado_models/{model}/")
-    shell:
-        "python {input} {output}_url"
-
-rule download_rerio_guppy_models:
-    input:
-        "resources/rerio/download_model.py"
-    output:
-        "resources/ont-guppy/data/{model}.cfg",
-        "resources/ont-guppy/data/{model}.jsn"
-    shell:
-        ("""
-        if [ ! -f resources/ont-guppy/data/{wildcards.model}.cfg ]
-        then
-            python {input} resources/rerio/basecall_models/{wildcards.model}
-            cp resources/rerio/basecall_models/{wildcards.model}.* resources/ont-guppy/data/
-        fi
-        """)
-
-rule install_MicrobeMod:
-    output:
-        directory("resources/MicrobeMod/MicrobeMod/db/")
-    conda:
-        "envs/MicrobeMod.yaml"
-    shell:
-        ("""
-        cd resources/
-        rm -rf MicrobeMod
-        git clone https://github.com/cultivarium/MicrobeMod.git
-        cd MicrobeMod/MicrobeMod/
-        python download_db.py
-        cd ../
-        pip install .
-        """)
-
-rule download_and_extract_raw_data:
-    output:
-        temp(directory(f"resources/datasets/{config['sample']}/{{raw_set}}_raw/"))
-    params:
-        source = lambda wildcards: DATASETS.loc[config['sample'], f'{wildcards.raw_set}_source']
-    run:
-        import os
-        if params.source.startswith('http') and "tar.gz" in params.source:
-            shell(
-                f"""
-                mkdir -p {output}
-                cd {output}
-                wget -r -np -nH --cut-dirs 20 {params.source}
-                tar -xzf *.tar.gz*
-                rm *.tar.gz*
-                """)
-        elif params.source.startswith('s3'):
-            shell(
-                f"""
-                aws s3 cp --recursive --no-sign-request {params.source} {output} --exclude "*" --include "{os.path.basename(config['sample'])}*"
-                """)
-        elif ':' in params.source:
-            # assume ssh
-            for alias in SSH_SERVERS.index:
-                if params.source.startswith(alias+":"):
-                    fp_server = params.source.split(":")[1]
-                    shell(
-                        f"""
-                        rsync -av -e "ssh -i {SSH_SERVERS.loc[alias, 'identity']} -p {SSH_SERVERS.loc[alias, 'port']}" {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
-                        """)
-        elif '/' in params.source and os.path.exists(params.source):
-            # assume local files
-            shell(
-                f"""
-                mkdir -p {output}
-                cp -r {params.source} {output}/
-                """)
-
-rule download_reference:
-    # TODO: implement
-    input:
-        f"resources/datasets/{config['sample']}/NAT_raw"
-    output:
-        temp(directory(f"resources/datasets/{config['sample']}/reference/"))
-    params:
-        source = DATASETS.loc[config['sample'], 'ref_source']
-    run:
-        import os
-        if params.source.startswith('http'):
-            if "tar.gz" in params.source:
-                shell(
-                    f"""
-                    mkdir -p {output}
-                    cd resources/datasets/{config['sample']}
-                    wget -r -np -nH --cut-dirs 20 {params.source}
-                    tar -xzf *.tar.gz* -C reference/
-                    rm *.tar.gz*
-                    """)
-            else:
-                shell(
-                    f"""
-                    mkdir -p {output}
-                    cd {output}
-                    wget -r -np -nH --cut-dirs 20 {params.source}
-                    """)
-        elif params.source.startswith('s3'):
-            shell(
-                f"""
-                aws s3 cp --recursive --no-sign-request {params.source} {output} --exclude "*" --include "{os.path.basename(config['sample'])}*"
-                """)
-        elif ':' in params.source:
-            # assume ssh
-            for alias in SSH_SERVERS.index:
-                if params.source.startswith(alias+":"):
-                    fp_server = params.source.split(":")[1]
-                    shell(
-                        f"""
-                        mkdir -p {output}
-                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
-                        """)
-        elif '/' in params.source and os.path.exists(params.source):
-            # assume local files
-            shell(
-                f"""
-                mkdir -p {output}
-                cp -r {params.source} {output}/
-                """)
-        else:
-            # assume NCBI nuccore accession
-            shell(
-                f"""
-                mkdir -p {output}
-                esearch -db nuccore -query "{params.source}" | efetch -format fasta > "{output}/{params.source}.fasta"
-                """)
-
 def find_any_file(wildcards, filetype=".fast5", d=None):
     if d is None:
         d = f"{config['datasets_dir']}/{config['sample']}/NAT_raw/"
@@ -273,40 +41,6 @@ def find_any_file(wildcards, filetype=".fast5", d=None):
         return all_files[0]
     else:
         return "missing"
-
-rule extract_meta:
-    input:
-        f"resources/datasets/{config['sample']}/NAT_raw"
-    output:
-        f"results/{config['sample']}/metadata.yaml",
-        f"results/{config['sample']}/raw_dtype.txt"
-    params:
-        any_pod5 = lambda wildcards: find_any_file(wildcards, filetype=".pod5"),
-        any_fast5 = lambda wildcards: find_any_file(wildcards, filetype=".fast5")
-    conda:
-        "envs/meta.yaml"
-    script:
-        "scripts/extract_meta.py"
-
-#checkpoint choose_pipeline:
-rule choose_pipeline:
-    input:
-        f"results/{config['sample']}/metadata.yaml",
-        "resources/guppy_workflows.csv"
-    output:
-        f"results/{config['sample']}/config.txt",
-        f"results/{config['sample']}/pore.txt"
-    priority: 100
-    run:
-        config_name = get_guppy_config_name(input[0], input[1])
-        print("config name:", config_name)
-        with open(f"{output[0]}", 'w') as f:
-            print(config_name, file=f)
-        
-        pore = config_name_to_pore(config_name)
-        print("pore:", pore)
-        with open(f"{output[1]}", 'w') as f:
-            print(pore, file=f)
 
 def extract_meta_field(fn, field):
     with open(fn, 'r') as f:
@@ -317,6 +51,11 @@ def extract_meta_field(fn, field):
                 except:
                     return None
     return None
+
+def parse_pore(wildcards):
+    fn = f"results/{config['sample']}/pore.txt"
+    with open(fn, 'r') as f:
+        return f.read().strip()
 
 def all_model_paths(models=None):
     model_paths = {}
@@ -347,11 +86,6 @@ def all_model_paths(models=None):
         else:
             raise ValueError("unknown model name format")
     return list(model_paths.values())
-
-def parse_pore(wildcards):
-    fn = f"results/{config['sample']}/pore.txt"
-    with open(fn, 'r') as f:
-        return f.read().strip()
 
 def get_dorado_models_from_config(wildcards, model_type):
     pore = parse_pore(wildcards)
@@ -398,769 +132,207 @@ def get_raw_dir(wildcards):
     raw_files = glob.glob(f"{config['datasets_dir']}/{config['sample']}/NAT_raw/**/*.{filetype}", recursive=True)
     return os.path.dirname(raw_files[0])
 
-rule download_required_models:
-    input:
-        all_model_paths()
-    output:
-        "resources/all_models_downloaded.txt"
-    shell:
-        "touch {output}"
+##### target rules #####
 
-rule dorado:
+rule all:
     input:
-        f"resources/dorado-{config['dorado_version']}/bin/dorado",
-        f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_raw/",
-        f"results/{config['sample']}/metadata.yaml",
-        "resources/all_models_downloaded.txt", #all_model_paths(),
-        f"results/{config['sample']}/pore.txt",
-        f"results/{config['sample']}/raw_dtype.txt"
+        (
+        f"results/{config['sample']}/workflow_version.txt",
+        f"results/{config['sample']}/success.r10.txt",
+        f"results/{config['sample']}/success.r9.txt",
+        #f"results/{config['sample']}/success.r9_comparative.txt"
+        )
+
+rule r10_analysis:
+    input:
+        f"results/{config['sample']}/starttime.txt",
+        f"results/{config['sample']}/prokka",
+        expand(
+        f"results/{config['sample']}/{{raw_set}}_dorado.contig_depth.csv", raw_set=["NAT", "WGA"]
+        ),
+        expand(
+        f"results/{config['sample']}/nanoplot/{{raw_set}}_dorado/", raw_set=["NAT", "WGA"]
+        ),
+        f"results/{config['sample']}/MicrobeMod/NAT_dorado.rm.genes.tsv",
+        f"results/{config['sample']}/MicrobeMod/NAT_dorado.motifs.tsv",
+        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.auto_filter.bed",
+        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.fixed_filter.bed",
+        f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.no_filter.bed",
     output:
-        bam = temp(f"results/{config['sample']}/{{raw_set}}_dorado.bam"),
-        runtime = f"results/{config['sample']}/{{raw_set}}_dorado.runtime.txt"
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+"
-    conda:
-        "envs/pod5.yaml"
+        success = f"results/{config['sample']}/success.r10.txt",
+        runtime = f"results/{config['sample']}/runtime.r10.txt"
+    shell:
+        ("""
+        touch {output.success}
+        start=$(cat {input[0]})
+        end=`date +%s`
+        runtime=$((end-start))
+        echo $runtime > {output.runtime}
+        """)
+
+rule r9_analysis:
+    input:
+        f"results/{config['sample']}/starttime.txt",
+        f"results/{config['sample']}/prokka",
+        expand(
+        f"results/{config['sample']}/{{raw_set}}_guppy_canonical.contig_depth.csv", raw_set=["NAT", "WGA"]
+        ),
+        expand(
+        f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]
+        ),
+        f"results/{config['sample']}/MicrobeMod/NAT_guppy_canonical.rm.genes.tsv",
+        f"results/{config['sample']}/tombo/alt.runtime.txt",
+        f"results/{config['sample']}/tombo/de_novo.runtime.txt",
+        f"results/{config['sample']}/modbam2bed/NAT_guppy_modified.modbam2bed.bed",
+        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.auto_filter.bed",
+        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.fixed_filter.bed",
+        f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.no_filter.bed",
+    output:
+        success = f"results/{config['sample']}/success.r9.txt",
+        runtime = f"results/{config['sample']}/runtime.r9.txt"
+    shell:
+        ("""
+        touch {output.success}
+        start=$(cat {input[0]})
+        end=`date +%s`
+        runtime=$((end-start))
+        echo $runtime > {output.runtime}
+        """)
+
+rule r9_comparative_analysis:
+    input:
+        f"results/{config['sample']}/starttime.txt",
+        f"results/{config['sample']}/snapper/",
+        f"results/{config['sample']}/nanodisco/difference/",
+        f"results/{config['sample']}/tombo/compare.runtime.txt",
+    output:
+        success = f"results/{config['sample']}/success.r9_comparative.txt",
+        runtime = f"results/{config['sample']}/runtime.r9_comparative.txt"
+    shell:
+        ("""
+        touch {output.success}
+        start=$(cat {input[0]})
+        end=`date +%s`
+        runtime=$((end-start))
+        echo $runtime > {output.runtime}
+        """)
+
+##### load rules #####
+
+include: "rules/common.smk"
+include: "rules/basecalling.smk"
+include: "rules/fast5.smk"
+include: "rules/fetch_data.smk"
+include: "rules/mapping.smk"
+include: "rules/MicrobeMod.smk"
+include: "rules/modbam.smk"
+include: "rules/nanodisco.smk"
+include: "rules/setup.smk"
+include: "rules/snapper.smk"
+include: "rules/stats_and_annotation.smk"
+include: "rules/tombo.smk"
+
+##### rules with run directive #####
+
+rule download_and_extract_raw_data:
+    input:
+        f"results/{config['sample']}/starttime.txt"
+    output:
+        temp(directory(f"resources/datasets/{config['sample']}/{{raw_set}}_raw/"))
     params:
-        raw_dtype = parse_raw_dtype,
-        raw_dir = lambda wildcards, input: f"{input[1]}",#get_raw_dir,
-        simplex = lambda wildcards: get_dorado_models_from_config(wildcards, "simplex"),
-        mods = lambda wildcards: get_dorado_models_from_config(wildcards, "modifications"),
-    resources:
-        gpu = 1
-    shell:
-        ("""
-        simplex={params.simplex}
-        mods={params.mods}
-        start=`date +%s`
-        if [ ! -z "$simplex" ]; then
-            if [ ! -z "$mods" ]; then
-                if [[ {params.raw_dtype} == fast5 ]]; then
-                    pod5 convert fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/ --one-to-one ./{params.raw_dir}/
-                fi
-                resources/dorado-{config[dorado_version]}/bin/dorado basecaller {params.simplex} {params.raw_dir} \
-                    --recursive \
-                    --modified-bases-models {params.mods} \
-                    --emit-moves -b {config[dorado_batchsize]} > {output.bam}
-            fi
-        fi
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule guppy_canonical:
-    input:
-        "resources/ont-guppy/bin/guppy_basecaller",
-        f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_raw/",
-        f"results/{config['sample']}/metadata.yaml",
-        "resources/all_models_downloaded.txt",#all_model_paths(),
-        f"results/{config['sample']}/pore.txt",
-        f"results/{config['sample']}/config.txt",
-        f"results/{config['sample']}/raw_dtype.txt"
-    output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/workspace/")),
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/pass/")),
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/fail/")),
-        runtime = f"results/{config['sample']}/{{raw_set}}_guppy_canonical/runtime.txt"
-    conda:
-        "envs/pod5.yaml"
-    resources:
-        gpu = 1
-    priority: 50 # running tombo takes longer than the modkit jobs
-    params: 
-        raw_dtype = parse_raw_dtype,
-        raw_dir = lambda wildcards, input: f"{input[1]}",#get_raw_dir,
-        config = parse_config,
-        mods = lambda wildcards: get_guppy_models_from_config(wildcards, "modifications"),
-    shell:
-        ("""
-        config={params.config}
-        mods={params.mods}
-        start=`date +%s`
-        if [ ! -z "$config" ]; then
-            if [ ! -z "$mods" ]; then
-                mkdir -p results/{config[sample]}/{wildcards.raw_set}_guppy_canonical
-                if [[ {params.raw_dtype} == pod5 ]]; then
-                    if [ ! -d "./{params.raw_dir}/fast5s/" ]; then
-                        mkdir -p ./{params.raw_dir}/fast5s/
-                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/
-                    fi
-                    resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir}/fast5s/ \
-                        -s results/{config[sample]}/{wildcards.raw_set}_guppy_canonical/ \
-                        -c {params.config} --recursive -x 'cuda:0' --fast5_out
-                else
-                    resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir} \
-                        -s results/{config[sample]}/{wildcards.raw_set}_guppy_canonical/ \
-                        -c {params.config} --recursive -x 'cuda:0' --fast5_out
-                fi
-            fi
-        fi
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule guppy_modified:
-    input:
-        "resources/ont-guppy/bin/guppy_basecaller",
-        f"{config['datasets_dir']}/{config['sample']}/NAT_raw/",
-        f"results/{config['sample']}/metadata.yaml",
-        "resources/all_models_downloaded.txt", #all_model_paths(),
-        f"results/{config['sample']}/pore.txt",
-        f"results/{config['sample']}/config.txt",
-        f"results/{config['sample']}/raw_dtype.txt"
-    output:
-        temp(directory(f"results/{config['sample']}/NAT_guppy_modified/pass/")),
-        temp(directory(f"results/{config['sample']}/NAT_guppy_modified/fail/")),
-        runtime = f"results/{config['sample']}/NAT_guppy_modified/runtime.txt"
-    conda:
-        "envs/pod5.yaml"
-    resources:
-        gpu = 1
-    params: 
-        raw_dtype = parse_raw_dtype,
-        raw_dir = lambda wildcards, input: f"{input[1]}",#get_raw_dir,
-        config = parse_config,
-        mods = lambda wildcards: get_guppy_models_from_config(wildcards, "modifications"),
-    shell:
-        ("""
-        config={params.config}
-        mods={params.mods}
-        start=`date +%s`
-        if [ ! -z "$config" ]; then
-            if [ ! -z "$mods" ]; then
-                mkdir -p results/{config[sample]}/NAT_guppy_modified
-                if [[ {params.raw_dtype} == pod5 ]]; then
-                    if [ ! -d "./{params.raw_dir}/fast5s/" ]; then
-                        mkdir -p ./{params.raw_dir}/fast5s/
-                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/
-                    fi
-                    resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir}/fast5s/ \
-                        -s results/{config[sample]}/NAT_guppy_modified/ \
-                        -c {params.mods} --recursive -x 'cuda:0' --bam_out
-                else
-                    resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir} \
-                        -s results/{config[sample]}/NAT_guppy_modified/ \
-                        -c {params.mods} --recursive -x 'cuda:0' --bam_out
-                fi
-            fi
-        fi
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule compress_to_gzip:
-    input:
-        f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/workspace/",
-    output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/gzip/"))
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+",
-        model="[A-Za-z0-9]+"
-    conda:
-        "envs/fast5api.yaml"
-    threads: config['threads']
-    #params:
-    #    any_fast5 = lambda wildcards, input: find_any_file(wildcards, filetype=".fast5", d=f"{input}")
-    shell:
-        ("""
-        mkdir -p {output}
-        if [ $(check_compression --recursive -i {input} | grep -c vbz) -ge 1 ] ; then
-            compress_fast5 -t {threads} --recursive -i {input} -s {output} -c gzip
-        else
-            cp -r {input}/* {output}/*
-        fi
-        """)
-
-rule bam_to_fastq:
-    input:
-        f"results/{config['sample']}/{{fn}}.bam"
-    output:
-        temp(f"results/{config['sample']}/{{fn}}.fastq")
-    conda:
-        "envs/samtools.yaml"
-    shell:
-        "samtools fastq -T mv,MM,ML {input} > {output}"
-
-rule find_reference:
-    input:
-        f"resources/datasets/{config['sample']}/reference/"
-    output:
-        #outdir = directory(f"results/{config['sample']}/"),
-        ref = f"results/{config['sample']}/reference.fasta",
-        ref_fp = f"results/{config['sample']}/reference_fp.txt"
+        source = lambda wildcards: DATASETS.loc[config['sample'], f'{wildcards.raw_set}_source']
     run:
-        import glob
-        import shutil
         import os
-        # find any fasta file anywhere in the sample
-        fns = (
-            glob.glob(f"{config['datasets_dir']}/{config['sample']}/reference/**/*.fasta", recursive=True) +
-            glob.glob(f"{config['datasets_dir']}/{config['sample']}/reference/**/*.fas", recursive=True) + 
-            glob.glob(f"{config['datasets_dir']}/{config['sample']}/reference/**/*.fna", recursive=True) + 
-            glob.glob(f"{config['datasets_dir']}/{config['sample']}/reference/**/*.fa", recursive=True))
-        if len(fns) > 1:
-            raise IOError(f"Found more than one potential reference fasta file: {fns}.")
-        elif len(fns) == 0:
-            raise IOError("Found no potential reference fasta file.")
-        if not os.path.exists(f"results/{config['sample']}/"):
-            os.makedirs(f"results/{config['sample']}/")
-        with open(f"{output.ref_fp}", "w") as f:
-            print(fns[0], file=f)
-        shutil.copyfile(fns[0], f"{output.ref}")
+        if params.source.startswith('http') and "tar.gz" in params.source:
+            shell(
+                f"""
+                mkdir -p {output}
+                cd {output}
+                wget -r -np -nH --cut-dirs 20 {params.source}
+                tar -xzf *.tar.gz*
+                rm *.tar.gz*
+                """)
+        elif params.source.startswith('s3'):
+            shell(
+                f"""
+                aws s3 cp --recursive --no-sign-request {params.source} {output} \
+                --exclude "*" --include "{os.path.basename(config['sample'])}*"
+                """)
+        elif ':' in params.source:
+            # assume ssh
+            for alias in SSH_SERVERS.index:
+                if params.source.startswith(alias+":"):
+                    fp_server = params.source.split(":")[1]
+                    shell(
+                        f"""
+                        rsync -av \
+                        -e "ssh -i {SSH_SERVERS.loc[alias, 'identity']} -p {SSH_SERVERS.loc[alias, 'port']}" \
+                        --include="*/" --include="*.fast5" \
+                        --include="*.pod5" --exclude="*" \
+                        {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
+                        """)
+        elif '/' in params.source and os.path.exists(params.source):
+            # assume local files
+            shell(
+                f"""
+                mkdir -p {output}
+                cp -r {params.source} {output}/
+                """)
 
-rule prokka:
+rule download_reference:
     input:
-        f"results/{config['sample']}/reference.fasta"
+        f"resources/datasets/{config['sample']}/NAT_raw",
+        f"results/{config['sample']}/starttime.txt"
     output:
-        outdir = directory(f"results/{config['sample']}/prokka")
-    log:
-        f"results/{config['sample']}/prokka/stdout.txt"
-    conda:
-        "envs/prokka.yaml"
-    threads: config['threads']
-    shell:
-        ("""
-        mkdir -p {output.outdir}
-        prokka --outdir {output.outdir} --force --cpus {threads} {input} > {log}
-        """)
-
-rule map_guppy_calls:
-    input:
-        fastq = f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/pass/",
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        temp(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}.mapped.sam")
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+",
-        model="[A-Za-z0-9]+"
-    conda:
-        "envs/map_guppy.yaml"
-    shell:
-        ("""
-        if compgen -G "{input.fastq}/*.bam" > /dev/null ; then
-            for bamfile in {input.fastq}/*.bam ; do 
-                samtools fastq -T mv,MM,ML "${{bamfile}}" > "${{bamfile}}.fastq"
-            done
-            minimap2 --secondary=no -ax map-ont -y {input.reference} {input.fastq}/*.bam.fastq > {output}
-        else
-            minimap2 --secondary=no -ax map-ont -y {input.reference} {input.fastq}/*.fastq > {output}
-        fi
-        """)
-
-rule map_dorado_calls:
-    input:
-        fastq = f"results/{config['sample']}/{{raw_set}}_dorado.fastq",
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        temp(f"results/{config['sample']}/{{raw_set}}_dorado.mapped.sam")
-    conda:
-        "envs/minimap2.yaml"
-    shell:
-        "minimap2 --secondary=no -ax map-ont -y {input.reference} {input.fastq} > {output}"
-
-rule samtools_sort:
-    input:
-        "{fp}.sam"
-    output:
-        "{fp}.sorted.bam"
-    conda:
-        "envs/samtools.yaml"
-    shell:
-        "samtools sort {input} > {output}"
-
-rule samtools_index:
-    input:
-        "{fp}.bam"
-    output:
-        "{fp}.bam.bai"
-    conda:
-        "envs/samtools.yaml"
-    shell:
-        "samtools index {input}"
-
-rule nanoplot:
-    input:
-        f"results/{config['sample']}/{{tool_set_model}}.mapped.sorted.bam"
-    output:
-        outdir = directory(f"results/{config['sample']}/nanoplot/{{tool_set_model}}/")
-    log:
-        f"results/{config['sample']}/nanoplot/{{tool_set_model}}/stdout.txt"
-    wildcard_constraints:
-        tool_set_model=r"\w+"
-    conda:
-        "envs/nanoplot.yaml"
-    threads: config['threads']
-    shell:
-        ("""
-        mkdir -p {output.outdir}
-        NanoPlot -t {threads} --bam {input} -o {output.outdir} > {log}
-        """)
-
-rule genomecov_from_bam:
-    input:
-        f"results/{config['sample']}/{{tool_set_model}}.mapped.sorted.bam"
-    output:
-        f"results/{config['sample']}/{{tool_set_model}}.genomecov"
-    log:
-        f"results/{config['sample']}/{{tool_set_model}}.log"
-    wildcard_constraints:
-        tool_set_model=r"\w+"
+        temp(directory(f"resources/datasets/{config['sample']}/reference/"))
     params:
-        "-d -split" #"-bg"  # optional parameters
-    wrapper:
-        "v3.7.0/bio/bedtools/genomecov"
-
-rule contigcov:
-    input:
-        f"results/{config['sample']}/{{tool_set_model}}.genomecov"
-    output:
-        f"results/{config['sample']}/{{tool_set_model}}.contig_depth.csv"
-    wildcard_constraints:
-        tool_set_model=r"\w+"
+        source = DATASETS.loc[config['sample'], 'ref_source']
     run:
-        import pandas as pd
-        df = pd.read_csv(f"{input}", sep="\t", header=None, names=['contig', 'pos', 'cov'])
-        d = df.groupby('contig').agg(['sum','max'])
-        con = pd.DataFrame(d[('cov', 'sum')] / d[('pos', 'max')], columns=['depth'])
-        con['size'] = d[('pos', 'max')]
-        for i in config['contig_coverages']:
-            con[f'min_{i}'] = df.groupby('contig')['cov'].apply(lambda c: (c >= i).sum() / len(c) * 100.)
-        con.to_csv(f"{output}", float_format='%.2f', sep='\t')
-
-rule modkit_auto_filter:
-    input:
-        reference = f"results/{config['sample']}/reference.fasta",
-        bam = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam",
-        ind = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam.bai"
-    output:
-        bed = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.auto_filter.bed",
-        runtime = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.auto_filter.runtime.txt"
-    log:
-        f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.auto_filter.log"
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+"
-    conda:
-        "envs/modkit.yaml"
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/modkit
-        modkit pileup {input.bam} {output.bed} --log-filepath {log} \
-            --ref {input.reference} --only-tabs
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule modkit_fixed_filter:
-    input:
-        reference = f"results/{config['sample']}/reference.fasta",
-        bam = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam",
-        ind = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam.bai"
-    output:
-        bed = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.fixed_filter.bed",
-        runtime = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.fixed_filter.runtime.txt",
-    log:
-        f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.fixed_filter.log"
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+"
-    conda:
-        "envs/modkit.yaml"
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/modkit
-        modkit pileup {input.bam} {output.bed} --log-filepath {log} --ref {input.reference} \
-            --filter-threshold C:{config[modkit_filter_threshold]} \
-            --filter-threshold A:{config[modkit_filter_threshold]} \
-            --only-tabs
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule modkit_no_filter:
-    input:
-        reference = f"results/{config['sample']}/reference.fasta",
-        bam = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam",
-        ind = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam.bai"
-    output:
-        bed = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.no_filter.bed",
-        runtime = f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.no_filter.runtime.txt",
-    log:
-        f"results/{config['sample']}/modkit/{{raw_set}}_{{basecaller}}.modkit_pileup.no_filter.log"
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+"
-    conda:
-        "envs/modkit.yaml"
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/modkit
-        modkit pileup {input.bam} {output.bed} --log-filepath {log} --ref {input.reference} \
-            --no-filtering --force-allow-implicit \
-            --only-tabs
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule modbam2bed:
-    input:
-        reference = f"results/{config['sample']}/reference.fasta",
-        bam = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam",
-        ind = f"results/{config['sample']}/{{raw_set}}_{{basecaller}}.mapped.sorted.bam.bai"
-    output:
-        bed = f"results/{config['sample']}/modbam2bed/{{raw_set}}_{{basecaller}}.modbam2bed.bed",
-        runtime = f"results/{config['sample']}/modbam2bed/{{raw_set}}_{{basecaller}}.runtime.txt",
-    wildcard_constraints:
-        raw_set="[A-Za-z0-9]+"
-    conda:
-        "envs/modbam2bed.yaml"
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/modbam2bed
-        modbam2bed --combine {input.reference} {input.bam} > {output.bed}
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule make_single_fast5s:
-    input:
-        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/gzip/" # to ensure that guppy already ran successfully (and converted pod5 to fast5 if necessary)
-    output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/single_fast5s/"))
-    conda:
-        "envs/fast5api.yaml"
-    params:
-        any_fast5 = lambda wildcards, input: find_any_file(wildcards, filetype=".fast5", d=f"{input}")
-    threads:
-        config['threads']
-    shell:
-        ("""
-        x=$(python workflow/scripts/match_single_fast5.py "{params.any_fast5}")
-        if [ "$x" = "True" ]; then
-            cp -r {input} {output}
-        else
-            multi_to_single_fast5 --input_path {input} --save_path {output} --threads {threads} --recursive
-        fi
-        """)
-        #mkdir -p {output}
-        #for i in $(ls {input}/); do
-        #    ln -s {input}/$i {output}/$i
-        #done
-
-rule resquiggle:
-    input:
-        reference = f"results/{config['sample']}/reference.fasta",
-        single_fast5_dir = f"results/{config['sample']}/{{raw_set}}_guppy_canonical/single_fast5s/"
-    output:
-        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/resquiggle.runtime.txt"
-    log:
-        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/resquiggle_failed_reads.txt"
-    conda:
-        "envs/tombo.yaml"
-    threads: config['threads']
-    params:
-        maxtime = config['timeout'],
-        retries = int(config['retries']) + 1
-    shell:
-        ("""
-        start=`date +%s`
-        for i in $(seq 1 {params.retries}) ; do 
-            echo resquiggle try $i
-            timeout {params.maxtime} bash -c 'tombo resquiggle {input.single_fast5_dir} {input.reference} --processes {threads} --failed-reads-filename {log} --ignore-read-locks --overwrite'
-            if [ "$?" -eq "0" ]; then 
-                end=`date +%s`
-                runtime=$((end-start))
-                echo $runtime > {output}
-                break
-            fi
-        done
-        """)
-
-rule tombo_de_novo:
-    input:
-        f"results/{config['sample']}/NAT_guppy_canonical/resquiggle.runtime.txt",
-        reference = f"results/{config['sample']}/reference.fasta",
-        single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/"
-    output:
-        f"results/{config['sample']}/tombo/de_novo.runtime.txt"
-    conda:
-        "envs/tombo.yaml"
-    threads: config['threads']
-    resources:
-        tombo = 1
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/tombo/
-        tombo detect_modifications de_novo --fast5-basedirs {input.single_fast5_dir} \
-            --statistics-file-basename results/{config[sample]}/tombo/de_novo \
-            --processes {threads}
-        tombo text_output browser_files \
-            --fast5-basedirs {input.single_fast5_dir} \
-            --statistics-filename results/{config[sample]}/tombo/de_novo.tombo.stats \
-            --file-types coverage valid_coverage fraction dampened_fraction signal signal_sd dwell \
-            --browser-file-basename results/{config[sample]}/tombo/de_novo
-        tombo text_output signif_sequence_context --statistics-filename results/{config[sample]}/tombo/de_novo.tombo.stats \
-            --genome-fasta {input.reference} --sequences-filename results/{config[sample]}/tombo/de_novo.most_signif.fasta
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output}
-        """)
-        # --per-read-statistics-basename  results/{config[sample]}/tombo/de_novo \
-
-rule tombo_alternative_model:
-    input:
-        f"results/{config['sample']}/NAT_guppy_canonical/resquiggle.runtime.txt",
-        reference = f"results/{config['sample']}/reference.fasta",
-        single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/"
-    output:
-        f"results/{config['sample']}/tombo/alt.runtime.txt"
-    conda:
-        "envs/tombo.yaml"
-    threads: config['threads']
-    resources:
-        tombo = 1
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/tombo/
-        for mod in 6mA 5mC ; do
-            tombo detect_modifications alternative_model --alternate-bases $mod \
-                --fast5-basedirs {input.single_fast5_dir} \
-                --statistics-file-basename results/{config[sample]}/tombo/alt \
-                --processes {threads}
-            tombo text_output browser_files \
-                --fast5-basedirs {input.single_fast5_dir} \
-                --statistics-filename "results/{config[sample]}/tombo/alt.${{mod}}.tombo.stats" \
-                --file-types coverage valid_coverage fraction dampened_fraction signal signal_sd dwell \
-                --browser-file-basename "results/{config[sample]}/tombo/alt.${{mod}}"
-            tombo text_output signif_sequence_context --statistics-filename "results/{config[sample]}/tombo/alt.${{mod}}.tombo.stats" \
-                --genome-fasta {input.reference} --sequences-filename "results/{config[sample]}/tombo/alt.${{mod}}.most_signif.fasta"
-        done
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output}
-        """)
-        #--per-read-statistics-basename  results/{config[sample]}/tombo/alt \
-
-rule tombo_model_sample_compare:
-    input:
-        f"results/{config['sample']}/NAT_guppy_canonical/resquiggle.runtime.txt",
-        f"results/{config['sample']}/WGA_guppy_canonical/resquiggle.runtime.txt",
-        reference = f"results/{config['sample']}/reference.fasta",
-        NAT_single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/",
-        wga_single_fast5_dir = f"results/{config['sample']}/WGA_guppy_canonical/single_fast5s/"
-    output:
-        f"results/{config['sample']}/tombo/compare.runtime.txt"
-    conda:
-        "envs/tombo.yaml"
-    threads: config['threads']
-    resources:
-        tombo = 1
-    shell:
-        ("""
-        start=`date +%s`
-        mkdir -p results/{config[sample]}/tombo/
-        tombo detect_modifications model_sample_compare \
-            --fast5-basedirs {input.NAT_single_fast5_dir} \
-            --control-fast5-basedirs {input.wga_single_fast5_dir} \
-            --statistics-file-basename results/{config[sample]}/tombo/compare \
-            --processes {threads}
-        tombo text_output browser_files \
-            --fast5-basedirs {input.NAT_single_fast5_dir} \
-            --control-fast5-basedirs {input.wga_single_fast5_dir} \
-            --statistics-filename "results/{config[sample]}/tombo/compare.tombo.stats" \
-            --file-types coverage valid_coverage fraction dampened_fraction signal signal_sd dwell difference \
-            --browser-file-basename "results/{config[sample]}/tombo/compare"
-        tombo text_output signif_sequence_context --statistics-filename "results/{config[sample]}/tombo/compare.tombo.stats" \
-            --genome-fasta {input.reference} --sequences-filename "results/{config[sample]}/tombo/compare.most_signif.fasta"
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output}
-        """)
-
-rule MicrobeMod_annotate_rm:
-    input:
-        "resources/MicrobeMod/MicrobeMod/db/", # ensure installation of MicrobeMod
-        bam = f"results/{config['sample']}/NAT_dorado.mapped.sorted.bam", # ensure that dorado ran successfully (R10.4.1)
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        f"results/{config['sample']}/MicrobeMod/mm.rm.genes.tsv"
-    conda:
-        "envs/MicrobeMod.yaml"
-    threads:
-        config['threads']
-    shell:
-        ("""
-        mkdir -p results/{config[sample]}/MicrobeMod
-        MicrobeMod annotate_rm -f {input.reference} -o results/{config[sample]}/MicrobeMod/mm -t {threads}
-        """)
-
-rule MicrobeMod_call_methylation:
-    input:
-        "resources/MicrobeMod/MicrobeMod/db/", # ensure installation of MicrobeMod
-        f"results/{config['sample']}/NAT_dorado.mapped.sorted.bam.bai",
-        bam = f"results/{config['sample']}/NAT_dorado.mapped.sorted.bam",
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        f"results/{config['sample']}/MicrobeMod/mm_motifs.tsv",
-        runtime = f"results/{config['sample']}/MicrobeMod/runtime.txt"
-    conda:
-        "envs/MicrobeMod.yaml"
-    threads:
-        config['threads']
-    shell:
-        ("""
-        mkdir -p results/{config[sample]}/MicrobeMod
-        start=`date +%s`
-        MicrobeMod call_methylation -b {input.bam} -r {input.reference} \
-            -o results/{config[sample]}/MicrobeMod/mm -t {threads}
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule merge_single_fast5s:
-    input:
-        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/single_fast5s/"
-    output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/merged_single_fast5s/"))
-    conda:
-        "envs/fast5api.yaml"
-    threads:
-        config['threads']
-    shell:
-        ("""
-        single_to_multi_fast5 --input_path {input} --save_path {output} --threads {threads} --recursive
-        """)
-
-rule snapper:
-    input:
-        nat_fast5 = f"results/{config['sample']}/NAT_guppy_canonical/merged_single_fast5s/",
-        wga_fast5 = f"results/{config['sample']}/WGA_guppy_canonical/merged_single_fast5s/",
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        out_dir = directory(f"results/{config['sample']}/snapper/"),
-        runtime = f"results/{config['sample']}/snapper/runtime.txt"
-    conda:
-        "envs/snapper.yaml"
-    threads:
-        config['threads']
-    shell: # requires that output dir does not exist
-        ("""
-        if [ -d "{output.out_dir}" ]; then
-            rm -r {output.out_dir}
-        fi
-        start=`date +%s`
-        snapper \
-            -sample_fast5dir {input.nat_fast5} \
-            -control_fast5dir {input.wga_fast5} \
-            -reference {input.reference} \
-            -threads {threads} \
-            -outdir {output.out_dir} \
-            -threads {threads}
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-rule nanodisco_preprocess:
-    input:
-        nat_fast5 = f"results/{config['sample']}/NAT_guppy_canonical/gzip/",
-        wga_fast5 = f"results/{config['sample']}/WGA_guppy_canonical/gzip/",
-        reference = f"results/{config['sample']}/reference.fasta"
-    output:
-        rds = f"results/{config['sample']}/nanodisco/analysis/ND_difference.RDS",
-        runtime = f"results/{config['sample']}/nanodisco/preprocess_runtime.txt",
-        preprocessed = temp(directory(f"results/{config['sample']}/nanodisco/preprocessed/")),
-        difference_dir = temp(directory(f"results/{config['sample']}/nanodisco/difference/")),
-        analysis_dir = directory(f"results/{config['sample']}/nanodisco/analysis/"),
-        tmp_dir = temp(directory(f"results/{config['sample']}/nanodisco/tmp/"))
-    threads:
-        config['threads_nanodisco']
-    singularity:
-        "library://fanglab/default/nanodisco"
-    shell:
-        ("""
-        start=`date +%s`
-        
-        if [ -d "{output.preprocessed}" ]; then
-            rm -r {output.preprocessed}
-        fi
-        nanodisco preprocess -p {threads} -f {input.wga_fast5} -s WGA -o {output.preprocessed} -r {input.reference}
-        nanodisco preprocess -p {threads} -f {input.nat_fast5} -s NAT -o {output.preprocessed} -r {input.reference}
-        
-        mkdir -p {output.tmp_dir}
-        export TMPDIR={output.tmp_dir}
-        if [ -d "{output.difference_dir}" ]; then
-            rm -r {output.difference_dir}
-        fi
-        echo "running nanodisco difference -nj {threads} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference}"
-        nanodisco difference -nj {threads} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference}
-
-        if [ -d "{output.analysis_dir}" ]; then
-            rm -r {output.analysis_dir}
-        fi
-        echo "running nanodisco merge -d {output.difference_dir} -o {output.analysis_dir} -b ND"
-        nanodisco merge -d {output.difference_dir} -o {output.analysis_dir} -b ND
-        end=`date +%s`
-        runtime=$((end-start))
-        echo $runtime > {output.runtime}
-        """)
-
-#rule nanodisco_discovery:
-#    input:
-#        rds = f"results/{config['sample']}/nanodisco/analysis/ND_difference.RDS",
-#        reference = f"results/{config['sample']}/reference.fasta",
-#        tmp_dir = f"results/{config['sample']}/nanodisco/tmp/"
-#    output:
-#        discovery_dir = directory(f"results/{config['sample']}/nanodisco/discovery/"),
-#        runtime = f"results/{config['sample']}/nanodisco/discovery_runtime.txt"
-#    threads:
-#        config['threads_nanodisco']
-#    singularity:
-#        "library://fanglab/default/nanodisco"
-#    shell:
-#        ("""
-#        pwd
-#        ls
-#        echo tada
-#        ls /mnt/
-#        echo tadum
-#        ls
-#        export TMPDIR={input.tmp_dir}
-#        start=`date +%s`
-#        nanodisco motif -p 1 -b ND -d {input.rds} -o {output.discovery_dir} -r {input.reference} -a
-#        end=`date +%s`
-#        runtime=$((end-start))
-#        echo $runtime > {output.runtime}
-#        """)
-#
-#rule nanodisco_typing_fine_mapping:
-#    input:
-#        analysis_dir = f"results/{config['sample']}/nanodisco/analysis/",
-#        rds = f"results/{config['sample']}/nanodisco/analysis/ND_difference.RDS",
-#        reference = f"results/{config['sample']}/reference.fasta",
-#    output:
-#        motif_dir = directory(f"results/{config['sample']}/nanodisco/motif/"),
-#        runtime = f"results/{config['sample']}/nanodisco/typing_fine_mapping_runtime.txt"
-#    threads:
-#        config['threads_nanodisco']
-#    singularity:
-#        "library://fanglab/default/nanodisco"
-#    shell:
-#        ("""
-#        start=`date +%s`
-#        nanodisco characterize -p {threads} -b ND -d {input.rds} -o {output.motif_dir} -m GATC,CCWGG,GCACNNNNNNGTT,AACNNNNNNGTGC -t nn,rf,knn -r {input.reference}
-#        end=`date +%s`
-#        runtime=$((end-start))
-#        echo $runtime > {output.runtime}
-#        """)
+        import os
+        if params.source.startswith('http'):
+            if "tar.gz" in params.source:
+                shell(
+                    f"""
+                    mkdir -p {output}
+                    cd resources/datasets/{config['sample']}
+                    wget -r -np -nH --cut-dirs 20 {params.source}
+                    tar -xzf *.tar.gz* -C reference/
+                    rm *.tar.gz*
+                    """)
+            else:
+                shell(
+                    f"""
+                    mkdir -p {output}
+                    cd {output}
+                    wget -r -np -nH --cut-dirs 20 {params.source}
+                    """)
+        elif params.source.startswith('s3'):
+            shell(
+                f"""
+                aws s3 cp --recursive --no-sign-request {params.source} {output} \
+                --exclude "*" --include "{os.path.basename(config['sample'])}*"
+                """)
+        elif ':' in params.source:
+            # assume ssh
+            for alias in SSH_SERVERS.index:
+                if params.source.startswith(alias+":"):
+                    fp_server = params.source.split(":")[1]
+                    shell(
+                        f"""
+                        mkdir -p {output}
+                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
+                        """)
+        elif '/' in params.source and os.path.exists(params.source):
+            # assume local files
+            shell(
+                f"""
+                mkdir -p {output}
+                cp -r {params.source} {output}/
+                """)
+        else:
+            # assume NCBI nuccore accession
+            shell(
+                f"""
+                mkdir -p {output}
+                esearch -db nuccore -query "{params.source}" | efetch -format fasta > "{output}/{params.source}.fasta"
+                """)

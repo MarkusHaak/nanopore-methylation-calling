@@ -49,15 +49,16 @@ def main(fast5_fn, pod5_fn, out_fn, out_dtype_fn):
             print("fast5", file=f)
 
 if __name__ == '__main__':
-    in_fn = sys.argv[1]
-    fast5_fn = in_fn if in_fn.endswith('.fast5') else 'missing'
-    pod5_fn = in_fn if in_fn.endswith('.pod5') else 'missing'
-    out_fn = sys.argv[2]
-    out_dtype_fn = sys.argv[3]
-else:
-    fast5_fn = str(snakemake.params.any_fast5)
-    pod5_fn = str(snakemake.params.any_pod5)
-    out_fn = str(snakemake.output[0])
-    out_dtype_fn = str(snakemake.output[1])
+    try:
+        fast5_fn = str(snakemake.params.any_fast5)
+        pod5_fn = str(snakemake.params.any_pod5)
+        out_fn = str(snakemake.output[0])
+        out_dtype_fn = str(snakemake.output[1])
+    except:
+        in_fn = sys.argv[1]
+        fast5_fn = in_fn if in_fn.endswith('.fast5') else 'missing'
+        pod5_fn = in_fn if in_fn.endswith('.pod5') else 'missing'
+        out_fn = sys.argv[2]
+        out_dtype_fn = sys.argv[3]
 
 main(fast5_fn, pod5_fn, out_fn, out_dtype_fn)
