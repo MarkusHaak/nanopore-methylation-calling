@@ -159,15 +159,14 @@ rule r10_analysis:
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.fixed_filter.bed",
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.no_filter.bed",
     output:
-        success = f"results/{config['sample']}/success.r10.txt",
-        runtime = f"results/{config['sample']}/runtime.r10.txt"
+        success = f"results/{config['sample']}/success.r10.txt"
     shell:
         ("""
         touch {output.success}
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > {output.runtime}
+        echo $runtime > results/{config[sample]}/total_runtime.txt"
         """)
 
 rule r9_analysis:
@@ -188,15 +187,14 @@ rule r9_analysis:
         f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.fixed_filter.bed",
         f"results/{config['sample']}/modkit/NAT_guppy_modified.modkit_pileup.no_filter.bed",
     output:
-        success = f"results/{config['sample']}/success.r9.txt",
-        runtime = f"results/{config['sample']}/runtime.r9.txt"
+        success = f"results/{config['sample']}/success.r9.txt"
     shell:
         ("""
         touch {output.success}
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > {output.runtime}
+        echo $runtime > results/{config[sample]}/total_runtime.txt"
         """)
 
 rule r9_comparative_analysis:
@@ -206,15 +204,14 @@ rule r9_comparative_analysis:
         f"results/{config['sample']}/nanodisco/difference/",
         f"results/{config['sample']}/tombo/compare.runtime.txt",
     output:
-        success = f"results/{config['sample']}/success.r9_comparative.txt",
-        runtime = f"results/{config['sample']}/runtime.r9_comparative.txt"
+        success = f"results/{config['sample']}/success.r9_comparative.txt"
     shell:
         ("""
         touch {output.success}
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > {output.runtime}
+        echo $runtime > results/{config[sample]}/total_runtime.txt"
         """)
 
 ##### load rules #####
