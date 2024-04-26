@@ -74,19 +74,6 @@ rule samtools_index:
 rule starttime:
     input:
         "resources/guppy_workflows.csv",
-        "resources/rerio/download_model.py",
-    output:
-        f"results/{config['sample']}/starttime.txt"
-    shell:
-        ("""
-        mkdir -p results/{config[sample]}
-        start=`date +%s`
-        echo $start > {output}
-        """)
-
-rule starttime:
-    input:
-        "resources/guppy_workflows.csv",
         "resources/all_models_downloaded.txt",
     output:
         f"results/{config['sample']}/starttime.txt"
