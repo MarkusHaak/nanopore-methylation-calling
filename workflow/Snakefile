@@ -164,7 +164,7 @@ rule r10_analysis:
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > results/{config[sample]}/total_runtime.txt"
+        echo $runtime > results/{config[sample]}/total_runtime.txt
         """)
 
 rule r9_analysis:
@@ -188,7 +188,7 @@ rule r9_analysis:
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > results/{config[sample]}/total_runtime.txt"
+        echo $runtime > results/{config[sample]}/total_runtime.txt
         """)
 
 rule r10_comparative_analysis:
@@ -208,7 +208,7 @@ rule r10_comparative_analysis:
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > results/{config[sample]}/total_runtime.txt"
+        echo $runtime > results/{config[sample]}/total_runtime.txt
         """)
 
 rule r9_comparative_analysis:
@@ -231,7 +231,7 @@ rule r9_comparative_analysis:
         start=$(cat {input[0]})
         end=`date +%s`
         runtime=$((end-start))
-        echo $runtime > results/{config[sample]}/total_runtime.txt"
+        echo $runtime > results/{config[sample]}/total_runtime.txt
         """)
 
 ##### load rules #####
