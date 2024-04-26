@@ -1,6 +1,6 @@
-version: 0.2.3
+version: 0.3.0
 
-datasets_dir: resources/datasets #without trailing slash
+datasets_dir: resources/datasets #without trailing slash !
 
 datasets: ../../all_datasets.csv
 ssh_servers: ../../ssh_servers.csv
