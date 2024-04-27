@@ -44,13 +44,8 @@ def find_any_file(wildcards, filetype=".fast5", d=None):
 
 def extract_meta_field(fn, field):
     with open(fn, 'r') as f:
-        for line in f.readlines():
-            if field in line:
-                try:
-                    return re.search(f"{field}: ([^,]*)[ ]*\n", line).group(1)
-                except:
-                    return None
-    return None
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    return data.get(field)
 
 def parse_pore(wildcards):
     fn = f"results/{config['sample']}/pore.txt"
