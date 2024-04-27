@@ -28,7 +28,7 @@ rule dorado:
         if [ ! -z "$simplex" ]; then
             if [ ! -z "$mods" ]; then
                 if [[ {params.raw_dtype} == fast5 ]]; then
-                    pod5 convert fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/ --one-to-one ./{params.raw_dir}/
+                    pod5 convert fast5 {params.raw_dir} --recursive --output {params.raw_dir} --one-to-one {params.raw_dir}
                 fi
                 resources/dorado-{config[dorado_version]}/bin/dorado basecaller {params.simplex} {params.raw_dir} \
                     --recursive \

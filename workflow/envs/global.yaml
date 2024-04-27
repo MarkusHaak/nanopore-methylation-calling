@@ -7,3 +7,5 @@ dependencies:
   - awscli =1.32.89
   - entrez-direct =21.6
   - singularity =3.8.6
+  - unzip
+  - ncbi-datasets-cli =16.12.1

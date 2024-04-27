@@ -15,7 +15,7 @@ rule compress_to_gzip:
         if [ $(check_compression --recursive -i {input} | grep -c vbz) -ge 1 ] ; then
             compress_fast5 -t {threads} --recursive -i {input} -s {output} -c gzip
         else
-            cp -r {input}/* {output}/*
+            cp -r {input}/* {output}/
         fi
         """)
 

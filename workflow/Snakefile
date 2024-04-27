@@ -10,6 +10,7 @@ from scripts.get_workflow import get_guppy_config_name, config_name_to_pore
 ##### run this workflow #####
 # snakemake --cores 24 --resources gpu=1 tombo=1 --use-conda --sdm conda --use-singularity --keep-going --default-resources "tmpdir='/vol/data/tmp/'" --config sample=<some/sample>
 # --nt --keep-incomplete --config tombo_per_read_stats=true
+# --delete-temp-output --rerun-incomplete
 # -n --dag | grep -v ERROR | tail -n +4 | dot -Tpdf > dag.pdf
 #############################
 
@@ -343,10 +344,16 @@ rule download_reference:
                 """)
         else:
             # assume NCBI nuccore accession
+            #shell(
+            #    f"""
+            #    mkdir -p {output}
+            #    esearch -db nuccore -query "{params.source}" | efetch -format fasta > "{output}/{params.source}.fasta"
+            #    """)
             shell(
                 f"""
                 mkdir -p {output}
-                esearch -db nuccore -query "{params.source}" | efetch -format fasta > "{output}/{params.source}.fasta"
+                datasets download genome accession "{params.source}" --filename "{output}/reference.zip" --include genome
+                unzip "{output}/reference.zip" -d "{output}/"
                 """)
 
 rule export_dataset_entry:
