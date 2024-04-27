@@ -1,4 +1,4 @@
-version: 0.3.3
+version: 0.3.4
 
 datasets_dir: resources/datasets #without trailing slash !
 
