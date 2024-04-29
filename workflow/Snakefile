@@ -150,7 +150,7 @@ rule r10_analysis:
         f"results/{config['sample']}/NAT_dorado.contig_depth.csv",
         f"results/{config['sample']}/nanoplot/NAT_dorado/",
         f"results/{config['sample']}/MicrobeMod/NAT_dorado.rm.genes.tsv",
-        f"results/{config['sample']}/MicrobeMod/NAT_dorado.motifs.tsv",
+        f"results/{config['sample']}/MicrobeMod/NAT_dorado_motifs.tsv",
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.auto_filter.bed",
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.fixed_filter.bed",
         f"results/{config['sample']}/modkit/NAT_dorado.modkit_pileup.no_filter.bed",
@@ -251,7 +251,8 @@ include: "rules/tombo.smk"
 
 rule download_and_extract_raw_data:
     input:
-        f"results/{config['sample']}/starttime.txt"
+        f"results/{config['sample']}/starttime.txt",
+        f"results/{config['sample']}/reference.fasta"
     output:
         temp(directory(f"resources/datasets/{config['sample']}/{{raw_set}}_raw/"))
     params:
@@ -296,7 +297,6 @@ rule download_and_extract_raw_data:
 
 rule download_reference:
     input:
-        f"resources/datasets/{config['sample']}/NAT_raw",
         f"results/{config['sample']}/starttime.txt"
     output:
         temp(directory(f"resources/datasets/{config['sample']}/reference/"))
