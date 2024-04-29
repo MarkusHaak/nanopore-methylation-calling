@@ -24,7 +24,7 @@ rule MicrobeMod_call_methylation:
         bam = f"results/{config['sample']}/{{tool_set_model}}.mapped.sorted.bam",
         reference = f"results/{config['sample']}/reference.fasta"
     output:
-        f"results/{config['sample']}/MicrobeMod/{{tool_set_model}}.motifs.tsv",
+        f"results/{config['sample']}/MicrobeMod/{{tool_set_model}}_motifs.tsv",
         runtime = f"results/{config['sample']}/MicrobeMod/{{tool_set_model}}.runtime.txt"
     wildcard_constraints:
         tool_set_model=r"\w+"
