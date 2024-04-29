@@ -8,9 +8,9 @@ import shutil
 from scripts.get_workflow import get_guppy_config_name, config_name_to_pore
 
 ##### run this workflow #####
-# snakemake --cores 24 --resources gpu=1 tombo=1 --use-conda --sdm conda --use-singularity --keep-going --default-resources "tmpdir='/vol/data/tmp/'" --config sample=<some/sample>
+# snakemake --cores 24 --resources gpu=1 tombo=1 --use-conda --sdm conda --use-singularity --keep-going --rerun-incomplete --default-resources "tmpdir='/vol/data/tmp/'" --config sample=<some/sample>
 # --nt --keep-incomplete --config tombo_per_read_stats=true
-# --delete-temp-output --rerun-incomplete
+# --delete-temp-output 
 # -n --dag | grep -v ERROR | tail -n +4 | dot -Tpdf > dag.pdf
 #############################
 
@@ -90,6 +90,8 @@ def get_dorado_models_from_config(wildcards, model_type):
         return ""
     meta_fn = f"results/{config['sample']}/metadata.yaml"
     sample_rate = extract_meta_field(meta_fn, 'sample_rate')
+    if sample_rate is None:
+        sample_rate = extract_meta_field(meta_fn, 'sample_frequency')
     if sample_rate is None:
         print(f"ERROR: no sample_rate field in {meta_fn}")
         return ""
