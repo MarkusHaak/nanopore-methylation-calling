@@ -9,6 +9,8 @@ rule dorado:
     output:
         bam = temp(f"results/{config['sample']}/{{raw_set}}_dorado.bam"),
         runtime = f"results/{config['sample']}/{{raw_set}}_dorado.runtime.txt"
+    log:
+        f"results/{config['sample']}/{{raw_set}}_dorado.log"
     wildcard_constraints:
         raw_set="[A-Za-z0-9]+"
     conda:
@@ -33,7 +35,7 @@ rule dorado:
                 resources/dorado-{config[dorado_version]}/bin/dorado basecaller {params.simplex} {params.raw_dir} \
                     --recursive \
                     --modified-bases-models {params.mods} \
-                    --emit-moves -b {config[dorado_batchsize]} > {output.bam}
+                    --emit-moves -b {config[dorado_batchsize]} > {output.bam} 2> >(tee -a {log} >&2)
             fi
         fi
         end=`date +%s`
@@ -55,6 +57,8 @@ rule guppy_canonical:
         temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/pass/")),
         temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/fail/")),
         runtime = f"results/{config['sample']}/{{raw_set}}_guppy_canonical/runtime.txt"
+    log:
+        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/guppy.log"
     conda:
         "../envs/pod5.yaml"
     resources:
@@ -76,15 +80,15 @@ rule guppy_canonical:
                 if [[ {params.raw_dtype} == pod5 ]]; then
                     if [ ! -d "./{params.raw_dir}/fast5s/" ]; then
                         mkdir -p ./{params.raw_dir}/fast5s/
-                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/
+                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/ 2>&1 | tee -a {log}
                     fi
                     resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir}/fast5s/ \
                         -s results/{config[sample]}/{wildcards.raw_set}_guppy_canonical/ \
-                        -c {params.config} --recursive -x 'cuda:0' --fast5_out
+                        -c {params.config} --recursive -x 'cuda:0' --fast5_out 2>&1 | tee -a {log}
                 else
                     resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir} \
                         -s results/{config[sample]}/{wildcards.raw_set}_guppy_canonical/ \
-                        -c {params.config} --recursive -x 'cuda:0' --fast5_out
+                        -c {params.config} --recursive -x 'cuda:0' --fast5_out 2>&1 | tee -a {log}
                 fi
             fi
         fi
@@ -106,6 +110,8 @@ rule guppy_modified:
         temp(directory(f"results/{config['sample']}/NAT_guppy_modified/pass/")),
         temp(directory(f"results/{config['sample']}/NAT_guppy_modified/fail/")),
         runtime = f"results/{config['sample']}/NAT_guppy_modified/runtime.txt"
+    log:
+        f"results/{config['sample']}/NAT_guppy_modified/guppy.log"
     conda:
         "../envs/pod5.yaml"
     resources:
@@ -126,15 +132,15 @@ rule guppy_modified:
                 if [[ {params.raw_dtype} == pod5 ]]; then
                     if [ ! -d "./{params.raw_dir}/fast5s/" ]; then
                         mkdir -p ./{params.raw_dir}/fast5s/
-                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/
+                        pod5 convert to_fast5 ./{params.raw_dir}/*.fast5 --output ./{params.raw_dir}/fast5s/ 2>&1 | tee -a {log}
                     fi
                     resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir}/fast5s/ \
                         -s results/{config[sample]}/NAT_guppy_modified/ \
-                        -c {params.mods} --recursive -x 'cuda:0' --bam_out
+                        -c {params.mods} --recursive -x 'cuda:0' --bam_out 2>&1 | tee -a {log}
                 else
                     resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir} \
                         -s results/{config[sample]}/NAT_guppy_modified/ \
-                        -c {params.mods} --recursive -x 'cuda:0' --bam_out
+                        -c {params.mods} --recursive -x 'cuda:0' --bam_out 2>&1 | tee -a {log}
                 fi
             fi
         fi

@@ -255,6 +255,8 @@ rule download_and_extract_raw_data:
         f"results/{config['sample']}/reference.fasta"
     output:
         temp(directory(f"resources/datasets/{config['sample']}/{{raw_set}}_raw/"))
+    #log:
+    #    f"results/{config['sample']}/{{raw_set}}_raw_download.log"
     params:
         source = lambda wildcards: DATASETS.loc[config['sample'], f'{wildcards.raw_set}_source']
     run:
@@ -263,69 +265,15 @@ rule download_and_extract_raw_data:
             shell(
                 f"""
                 mkdir -p {output}
-                cd {output}
-                wget -r -np -nH --cut-dirs 20 {params.source}
-                tar -xzf *.tar.gz*
-                rm *.tar.gz*
+                wget -r -np -nH --cut-dirs 20 {params.source} -P {output} 
+                tar -xzf {output}/*.tar.gz* -C {output}/ 
                 """)
         elif params.source.startswith('s3'):
-            shell(
-                f"""
-                aws s3 cp --recursive --no-sign-request {params.source} {output} \
-                --exclude "*" --include "{os.path.basename(config['sample'])}*"
-                """)
-        elif ':' in params.source:
-            # assume ssh
-            for alias in SSH_SERVERS.index:
-                if params.source.startswith(alias+":"):
-                    fp_server = params.source.split(":")[1]
-                    shell(
-                        f"""
-                        rsync -av \
-                        -e "ssh -i {SSH_SERVERS.loc[alias, 'identity']} -p {SSH_SERVERS.loc[alias, 'port']}" \
-                        --include="*/" --include="*.fast5" \
-                        --include="*.pod5" --exclude="*" \
-                        {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
-                        """)
-        elif '/' in params.source and os.path.exists(params.source):
-            # assume local files
             shell(
                 f"""
                 mkdir -p {output}
-                cp -r {params.source} {output}/
-                """)
-
-rule download_reference:
-    input:
-        f"results/{config['sample']}/starttime.txt"
-    output:
-        temp(directory(f"resources/datasets/{config['sample']}/reference/"))
-    params:
-        source = DATASETS.loc[config['sample'], 'ref_source']
-    run:
-        import os
-        if params.source.startswith('http'):
-            if "tar.gz" in params.source:
-                shell(
-                    f"""
-                    mkdir -p {output}
-                    cd resources/datasets/{config['sample']}
-                    wget -r -np -nH --cut-dirs 20 {params.source}
-                    tar -xzf *.tar.gz* -C reference/
-                    rm *.tar.gz*
-                    """)
-            else:
-                shell(
-                    f"""
-                    mkdir -p {output}
-                    cd {output}
-                    wget -r -np -nH --cut-dirs 20 {params.source}
-                    """)
-        elif params.source.startswith('s3'):
-            shell(
-                f"""
                 aws s3 cp --recursive --no-sign-request {params.source} {output} \
-                --exclude "*" --include "{os.path.basename(config['sample'])}*"
+                --exclude "*" --include "{os.path.basename(config['sample'])}*" 
                 """)
         elif ':' in params.source:
             # assume ssh
@@ -335,14 +283,68 @@ rule download_reference:
                     shell(
                         f"""
                         mkdir -p {output}
-                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/
+                        rsync -av \
+                        -e "ssh -i {SSH_SERVERS.loc[alias, 'identity']} -p {SSH_SERVERS.loc[alias, 'port']}" \
+                        --include="*/" --include="*.fast5" \
+                        --include="*.pod5" --exclude="*" \
+                        {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/ 
                         """)
         elif '/' in params.source and os.path.exists(params.source):
             # assume local files
             shell(
                 f"""
                 mkdir -p {output}
-                cp -r {params.source} {output}/
+                cp -r {params.source} {output}/ 
+                """)
+
+rule download_reference:
+    input:
+        f"results/{config['sample']}/starttime.txt"
+    output:
+        temp(directory(f"resources/datasets/{config['sample']}/reference/"))
+    #log:
+    #    f"results/{config['sample']}/reference_download.log"
+    params:
+        source = DATASETS.loc[config['sample'], 'ref_source']
+    run:
+        import os
+        if params.source.startswith('http'):
+            if "tar.gz" in params.source:
+                shell(
+                    f"""
+                    mkdir -p {output}
+                    wget -r -np -nH --cut-dirs 20 {params.source} -P {output}/ 
+                    tar -xzf {output}/*.tar.gz* -C {output}/ 
+                    """)
+            else:
+                shell(
+                    f"""
+                    mkdir -p {output}
+                    wget -r -np -nH --cut-dirs 20 {params.source} -P {output}/ 
+                    """)
+        elif params.source.startswith('s3'):
+            shell(
+                f"""
+                mkdir -p {output}
+                aws s3 cp --recursive --no-sign-request {params.source} {output} \
+                --exclude "*" --include "{os.path.basename(config['sample'])}*" 
+                """)
+        elif ':' in params.source:
+            # assume ssh
+            for alias in SSH_SERVERS.index:
+                if params.source.startswith(alias+":"):
+                    fp_server = params.source.split(":")[1]
+                    shell(
+                        f"""
+                        mkdir -p {output}
+                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/ 2>{log}
+                        """)
+        elif '/' in params.source and os.path.exists(params.source):
+            # assume local files
+            shell(
+                f"""
+                mkdir -p {output}
+                cp -r {params.source} {output}/ 
                 """)
         else:
             # assume NCBI nuccore accession
@@ -354,8 +356,8 @@ rule download_reference:
             shell(
                 f"""
                 mkdir -p {output}
-                datasets download genome accession "{params.source}" --filename "{output}/reference.zip" --include genome
-                unzip "{output}/reference.zip" -d "{output}/"
+                datasets download genome accession "{params.source}" --filename "{output}/reference.zip" --include genome 
+                unzip "{output}/reference.zip" -d "{output}/" 
                 """)
 
 rule export_dataset_entry:

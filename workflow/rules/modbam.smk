@@ -84,6 +84,8 @@ rule modbam2bed:
     output:
         bed = f"results/{config['sample']}/modbam2bed/{{raw_set}}_{{basecaller}}.modbam2bed.bed",
         runtime = f"results/{config['sample']}/modbam2bed/{{raw_set}}_{{basecaller}}.runtime.txt",
+    log:
+        f"results/{config['sample']}/modbam2bed/{{raw_set}}_{{basecaller}}.log",
     wildcard_constraints:
         raw_set="[A-Za-z0-9]+"
     conda:
@@ -92,7 +94,7 @@ rule modbam2bed:
         ("""
         start=`date +%s`
         mkdir -p results/{config[sample]}/modbam2bed
-        modbam2bed --combine {input.reference} {input.bam} > {output.bed}
+        modbam2bed --combine {input.reference} {input.bam} > {output.bed} 2>{log}
         end=`date +%s`
         runtime=$((end-start))
         echo $runtime > {output.runtime}

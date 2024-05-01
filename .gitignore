@@ -13,3 +13,4 @@ unexpected_tombo_errors*
 *.pyc
 *core-dump-db/
 __pycache__/
+taxdump.tar.gz

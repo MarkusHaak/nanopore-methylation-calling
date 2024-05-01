@@ -1,4 +1,4 @@
-version: 0.3.9
+version: 0.3.10
 
 datasets_dir: resources/datasets #without trailing slash !
 
@@ -17,8 +17,8 @@ dorado_batchsize: 512
 threads: 12
 threads_nanodisco: 4
 
-timeout: '2h'
-retries: 1
+#timeout: '2h'
+#retries: 1
 
 backup_alias: backup
 backup_dir: /vol/data/

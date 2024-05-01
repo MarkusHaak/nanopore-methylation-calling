@@ -6,6 +6,8 @@ rule snapper:
     output:
         out_dir = directory(f"results/{config['sample']}/snapper/"),
         runtime = f"results/{config['sample']}/snapper/runtime.txt"
+    log:
+        runtime = f"results/{config['sample']}/snapper/snapper.log"
     conda:
         "../envs/snapper.yaml"
     threads:
@@ -22,7 +24,7 @@ rule snapper:
             -reference {input.reference} \
             -threads {threads} \
             -outdir {output.out_dir} \
-            -threads {threads}
+            -threads {threads} >{log} 2>&1
         end=`date +%s`
         runtime=$((end-start))
         echo $runtime > {output.runtime}

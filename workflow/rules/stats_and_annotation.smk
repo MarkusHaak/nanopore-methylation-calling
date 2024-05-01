@@ -4,14 +4,14 @@ rule prokka:
     output:
         outdir = directory(f"results/{config['sample']}/prokka")
     log:
-        f"results/{config['sample']}/prokka/stdout.txt"
+        f"results/{config['sample']}/prokka/prokka.log"
     conda:
         "../envs/prokka.yaml"
     threads: config['threads']
     shell:
         ("""
         mkdir -p {output.outdir}
-        prokka --outdir {output.outdir} --force --cpus {threads} {input} > {log}
+        prokka --outdir {output.outdir} --force --cpus {threads} {input} >{log} 2>&1
         """)
 
 rule genomecov_from_bam:
@@ -44,7 +44,7 @@ rule nanoplot:
     output:
         outdir = directory(f"results/{config['sample']}/nanoplot/{{tool_set_model}}/")
     log:
-        f"results/{config['sample']}/nanoplot/{{tool_set_model}}/stdout.txt"
+        f"results/{config['sample']}/nanoplot/{{tool_set_model}}/nanoplot.log"
     wildcard_constraints:
         tool_set_model=r"\w+"
     conda:
@@ -53,5 +53,5 @@ rule nanoplot:
     shell:
         ("""
         mkdir -p {output.outdir}
-        NanoPlot -t {threads} --bam {input} -o {output.outdir} > {log}
+        NanoPlot -t {threads} --bam {input} -o {output.outdir} > {log} 2>&1
         """)

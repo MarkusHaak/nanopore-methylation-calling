@@ -30,6 +30,7 @@ def main(fast5_fn, pod5_fn, out_fn, out_dtype_fn):
                                 parsed[key] = val
                     else:
                         parsed[key] = val
+        os.remove(tmp_meta_fn)
         with open(out_fn, 'w') as f:
             for key,val in parsed.items():
                 print(f"{key}: {val}", file=f)
