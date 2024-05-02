@@ -2,7 +2,7 @@ rule compress_to_gzip:
     input:
         f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/workspace/",
     output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/gzip/"), keep_if=lambda f: config.get("keep_raws", False))
+        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/gzip/"))
     wildcard_constraints:
         raw_set="[A-Za-z0-9]+",
         model="[A-Za-z0-9]+"
