@@ -11,6 +11,7 @@ from scripts.get_workflow import get_guppy_config_name, config_name_to_pore
 # snakemake --cores 24 --resources gpu=1 tombo=1 --use-conda --sdm conda --use-singularity --keep-going --rerun-incomplete --default-resources "tmpdir='/vol/data/tmp/'" --config sample=<some/sample>
 # --nt --keep-incomplete --config tombo_per_read_stats=true
 # --delete-temp-output 
+# --config keep_raws=true
 # -n --dag | grep -v ERROR | tail -n +4 | dot -Tpdf > dag.pdf
 #############################
 

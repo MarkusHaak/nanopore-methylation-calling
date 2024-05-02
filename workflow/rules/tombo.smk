@@ -10,9 +10,6 @@ rule resquiggle:
     conda:
         "../envs/tombo.yaml"
     threads: config['threads']
-    #params:
-    #    maxtime = config['timeout'],
-    #    retries = int(config['retries']) + 1
     shell: # continue even if unexpected errors occure
         ("""
         start=`date +%s`
@@ -21,19 +18,6 @@ rule resquiggle:
         runtime=$((end-start))
         echo $runtime > {output}
         """)
-        #("""
-        #start=`date +%s`
-        #for i in $(seq 1 {params.retries}) ; do 
-        #    echo resquiggle try $i
-        #    timeout {params.maxtime} bash -c 'tombo resquiggle {input.single_fast5_dir} {input.reference} --processes {threads} --failed-reads-filename {log.failed} --ignore-read-locks --overwrite' 2>>{log.stderr}
-        #    if [ "$?" -eq "0" ]; then 
-        #        end=`date +%s`
-        #        runtime=$((end-start))
-        #        echo $runtime > {output}
-        #        break
-        #    fi
-        #done
-        #""")
 
 rule tombo_de_novo:
     input:
