@@ -1,4 +1,4 @@
-version: 0.4.1
+version: 0.3.12
 
 datasets_dir: resources/datasets #without trailing slash !
 
@@ -13,7 +13,7 @@ contig_coverages: [1, 5, 10, 20, 30, 40, 50]
 modkit_filter_threshold: 0.66
 
 # batchsize of 0 will automatically select a suitable batchsize
-dorado_batchsize: 0
+dorado_batchsize: 512
 
 threads: 12
 threads_nanodisco: 4
