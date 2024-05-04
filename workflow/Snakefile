@@ -10,8 +10,8 @@ from scripts.get_workflow import get_guppy_config_name, config_name_to_pore
 ##### run this workflow #####
 # snakemake --cores 24 --resources gpu=1 tombo=1 --use-conda --sdm conda --use-singularity --keep-going --rerun-incomplete --default-resources "tmpdir='/vol/data/tmp/'" --config sample=<some/sample>
 # --nt --keep-incomplete --config tombo_per_read_stats=true
-# --delete-temp-output 
-# --config keep_raws=true
+# --delete-temp-output
+# --config r9_comparative=[true|false|only]
 # -n --dag | grep -v ERROR | tail -n +4 | dot -Tpdf > dag.pdf
 #############################
 
@@ -133,16 +133,35 @@ def get_raw_dir(wildcards):
 
 ##### target rules #####
 
-rule all:
-    input:
-        f"results/{config['sample']}/workflow_command.txt",
-        f"results/{config['sample']}/workflow_version.txt",
-        f"results/{config['sample']}/workflow_config.yaml",
-        f"results/{config['sample']}/dataset_entry.yaml",
-        f"results/{config['sample']}/success.r10.txt",
-        f"results/{config['sample']}/success.r9.txt",
-        f"results/{config['sample']}/success.r10_comparative.txt",
-        f"results/{config['sample']}/success.r9_comparative.txt"
+if config['r9_comparative'] == 'only':
+    rule all:
+        input:
+            f"results/{config['sample']}/snapper/",
+            f"results/{config['sample']}/nanodisco/difference/",
+elif config['r9_comparative'] == True:
+    rule all:
+        input:
+            f"results/{config['sample']}/snapper/",
+            f"results/{config['sample']}/nanodisco/difference/",
+            f"results/{config['sample']}/workflow_command.txt",
+            f"results/{config['sample']}/workflow_version.txt",
+            f"results/{config['sample']}/workflow_config.yaml",
+            f"results/{config['sample']}/dataset_entry.yaml",
+            f"results/{config['sample']}/success.r10.txt",
+            f"results/{config['sample']}/success.r9.txt",
+            f"results/{config['sample']}/success.r10_comparative.txt",
+            f"results/{config['sample']}/success.r9_comparative.txt"
+else:
+    rule all:
+        input:
+            f"results/{config['sample']}/workflow_command.txt",
+            f"results/{config['sample']}/workflow_version.txt",
+            f"results/{config['sample']}/workflow_config.yaml",
+            f"results/{config['sample']}/dataset_entry.yaml",
+            f"results/{config['sample']}/success.r10.txt",
+            f"results/{config['sample']}/success.r9.txt",
+            f"results/{config['sample']}/success.r10_comparative.txt",
+            f"results/{config['sample']}/success.r9_comparative.txt"
 
 rule r10_analysis:
     input:
@@ -219,6 +238,9 @@ rule r9_comparative_analysis:
         expand(
         f"results/{config['sample']}/nanoplot/{{raw_set}}_guppy_canonical/", raw_set=["NAT", "WGA"]
         ),
+        expand(
+        f"results/{config['sample']}/{{raw_set}}_guppy_canonical/merged_single_fast5s/", raw_set=["NAT", "WGA"]
+        ),
         #f"results/{config['sample']}/snapper/",
         #f"results/{config['sample']}/nanodisco/difference/",
         f"results/{config['sample']}/tombo/compare.runtime.txt",
@@ -234,19 +256,27 @@ rule r9_comparative_analysis:
         """)
 
 ##### load rules #####
-
-include: "rules/common.smk"
-include: "rules/basecalling.smk"
-include: "rules/fast5.smk"
-include: "rules/fetch_data.smk"
-include: "rules/mapping.smk"
-include: "rules/MicrobeMod.smk"
-include: "rules/modbam.smk"
-include: "rules/nanodisco.smk"
-include: "rules/setup.smk"
-include: "rules/snapper.smk"
-include: "rules/stats_and_annotation.smk"
-include: "rules/tombo.smk"
+if config['r9_comparative'] == 'only':
+    include: "rules/snapper.smk"
+    include: "rules/nanodisco.smk"
+    include: "rules/tombo.smk"
+else:
+    include: "rules/common.smk"
+    include: "rules/basecalling.smk"
+    include: "rules/fetch_data.smk"
+    include: "rules/mapping.smk"
+    include: "rules/MicrobeMod.smk"
+    include: "rules/modbam.smk"
+    include: "rules/nanodisco.smk"
+    include: "rules/setup.smk"
+    include: "rules/snapper.smk"
+    include: "rules/stats_and_annotation.smk"
+    include: "rules/tombo.smk"
+if (config['r9_comparative'] == False and 
+    DATASETS.loc[config['sample'], 'WGA_source']):
+    include: "rules/fast5_no_temp.smk"
+else:
+    include: "rules/fast5.smk"
 
 ##### rules with run directive #####
 

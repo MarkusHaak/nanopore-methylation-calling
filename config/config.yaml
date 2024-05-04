@@ -1,4 +1,4 @@
-version: 0.3.12
+version: 0.3.13
 
 datasets_dir: resources/datasets #without trailing slash !
 
@@ -17,6 +17,7 @@ dorado_batchsize: 512
 
 threads: 12
 threads_nanodisco: 4
+threads_MicrobeMod: 8
 
 #keep_raws: false
 
@@ -24,6 +25,8 @@ backup_alias: backup
 backup_dir: /vol/data/
 
 tombo_per_read_stats: false
+
+r9_comparative: false
 
 models:
     'r10.4.1':

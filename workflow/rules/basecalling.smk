@@ -9,8 +9,8 @@ rule dorado:
     output:
         bam = temp(f"results/{config['sample']}/{{raw_set}}_dorado.bam"),
         runtime = f"results/{config['sample']}/{{raw_set}}_dorado.runtime.txt"
-    log:
-        f"results/{config['sample']}/{{raw_set}}_dorado.log"
+    #log:
+    #    f"results/{config['sample']}/{{raw_set}}_dorado.log" #  2> >(tee -a {log} >&2)
     wildcard_constraints:
         raw_set="[A-Za-z0-9]+"
     conda:
@@ -35,7 +35,7 @@ rule dorado:
                 resources/dorado-{config[dorado_version]}/bin/dorado basecaller {params.simplex} {params.raw_dir} \
                     --recursive \
                     --modified-bases-models {params.mods} \
-                    --emit-moves -b {config[dorado_batchsize]} > {output.bam} 2> >(tee -a {log} >&2)
+                    --emit-moves -b {config[dorado_batchsize]} > {output.bam}
             fi
         fi
         end=`date +%s`

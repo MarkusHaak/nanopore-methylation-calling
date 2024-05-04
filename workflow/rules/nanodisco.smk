@@ -10,10 +10,12 @@ rule nanodisco_preprocess:
         difference_dir = temp(directory(f"results/{config['sample']}/nanodisco/difference/")),
         analysis_dir = directory(f"results/{config['sample']}/nanodisco/analysis/"),
         tmp_dir = temp(directory(f"results/{config['sample']}/nanodisco/tmp/"))
-    log:
-        f"results/{config['sample']}/nanodisco/nanodisco_preprocess.log"
+    #log:
+    #    f"results/{config['sample']}/nanodisco/nanodisco_preprocess.log"
     threads:
-        config['threads_nanodisco']
+        100000 #ensure isolated execution
+    params:
+        t = config['threads_nanodisco']
     singularity:
         "library://fanglab/default/nanodisco"
     shell:
@@ -23,22 +25,22 @@ rule nanodisco_preprocess:
         if [ -d "{output.preprocessed}" ]; then
             rm -r {output.preprocessed}
         fi
-        nanodisco preprocess -p {threads} -f {input.wga_fast5} -s WGA -o {output.preprocessed} -r {input.reference} 2>>{log}
-        nanodisco preprocess -p {threads} -f {input.nat_fast5} -s NAT -o {output.preprocessed} -r {input.reference} 2>>{log}
+        nanodisco preprocess -p {params.t} -f {input.wga_fast5} -s WGA -o {output.preprocessed} -r {input.reference}
+        nanodisco preprocess -p {params.t} -f {input.nat_fast5} -s NAT -o {output.preprocessed} -r {input.reference}
         
         mkdir -p {output.tmp_dir}
         export TMPDIR={output.tmp_dir}
         if [ -d "{output.difference_dir}" ]; then
             rm -r {output.difference_dir}
         fi
-        echo "running nanodisco difference -nj {threads} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference}"
-        nanodisco difference -nj {threads} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference} 2>>{log}
+        echo "running nanodisco difference -nj {params.t} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference}"
+        nanodisco difference -nj {params.t} -nc 1 -p 2 -i {output.preprocessed} -o {output.difference_dir} -w WGA -n NAT -r {input.reference}
 
         if [ -d "{output.analysis_dir}" ]; then
             rm -r {output.analysis_dir}
         fi
         echo "running nanodisco merge -d {output.difference_dir} -o {output.analysis_dir} -b ND"
-        nanodisco merge -d {output.difference_dir} -o {output.analysis_dir} -b ND 2>>{log}
+        nanodisco merge -d {output.difference_dir} -o {output.analysis_dir} -b ND
         end=`date +%s`
         runtime=$((end-start))
         echo $runtime > {output.runtime}

@@ -62,4 +62,4 @@ if __name__ == '__main__':
         out_fn = sys.argv[2]
         out_dtype_fn = sys.argv[3]
 
-main(fast5_fn, pod5_fn, out_fn, out_dtype_fn)
+    main(fast5_fn, pod5_fn, out_fn, out_dtype_fn)

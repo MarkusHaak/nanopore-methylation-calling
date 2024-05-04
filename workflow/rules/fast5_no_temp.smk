@@ -2,7 +2,7 @@ rule compress_to_gzip:
     input:
         f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/workspace/",
     output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/gzip/"))
+        directory(f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/gzip/")
     wildcard_constraints:
         raw_set="[A-Za-z0-9]+",
         model="[A-Za-z0-9]+"
@@ -45,7 +45,7 @@ rule merge_single_fast5s:
         f"results/{config['sample']}/{{raw_set}}_guppy_canonical/single_fast5s/",
         f"results/{config['sample']}/{{raw_set}}_guppy_canonical/resquiggle.runtime.txt"
     output:
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/merged_single_fast5s/"))
+        directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/merged_single_fast5s/")
     conda:
         "../envs/fast5api.yaml"
     threads:
