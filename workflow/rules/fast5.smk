@@ -1,3 +1,30 @@
+rule sanitize:
+    input:
+        f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_raw/",
+    output:
+        temp(directory(f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_sanitized/")),
+        temp(directory(f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_merged/"))
+    wildcard_constraints:
+        raw_set="[A-Za-z0-9]+"
+    conda:
+        "../envs/fast5api.yaml"
+    threads: config['threads']
+    priority: 10
+    params:
+        any_fast5 = lambda wildcards, input: find_any_file(wildcards, filetype=".fast5", d=f"{input}")
+    shell:
+        ("""
+        mkdir -p {output[0]}
+        mkdir -p {output[1]}
+        x=$(python workflow/scripts/match_single_fast5.py "{params.any_fast5}")
+        if [ "$x" = "True" ]; then
+            single_to_multi_fast5 --input_path {input} --save_path {output[1]} --threads {threads} --recursive
+            compress_fast5 -t {threads} --recursive -i {output[1]} -s {output[0]} -c vbz --sanitize
+        else
+            compress_fast5 -t {threads} --recursive -i {input} -s {output[0]} -c vbz --sanitize
+        fi
+        """)
+
 rule compress_to_gzip:
     input:
         f"results/{config['sample']}/{{raw_set}}_guppy_{{model}}/workspace/",

@@ -10,6 +10,7 @@ rule snapper:
         "../envs/snapper.yaml"
     threads:
         config['threads']
+    priority: 10 # prioritize over nanodisco
     shell: # requires that output dir does not exist
         ("""
         if [ -d "{output.out_dir}" ]; then

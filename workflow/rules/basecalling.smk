@@ -46,7 +46,7 @@ rule dorado:
 rule guppy_canonical:
     input:
         "resources/ont-guppy/bin/guppy_basecaller",
-        f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_raw/",
+        f"{config['datasets_dir']}/{config['sample']}/{{raw_set}}_sanitized/",
         f"results/{config['sample']}/metadata.yaml",
         "resources/all_models_downloaded.txt",#all_model_paths(),
         f"results/{config['sample']}/pore.txt",
@@ -100,7 +100,7 @@ rule guppy_canonical:
 rule guppy_modified:
     input:
         "resources/ont-guppy/bin/guppy_basecaller",
-        f"{config['datasets_dir']}/{config['sample']}/NAT_raw/",
+        f"{config['datasets_dir']}/{config['sample']}/NAT_sanitized/",
         f"results/{config['sample']}/metadata.yaml",
         "resources/all_models_downloaded.txt", #all_model_paths(),
         f"results/{config['sample']}/pore.txt",

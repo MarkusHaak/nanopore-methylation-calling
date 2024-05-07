@@ -275,7 +275,7 @@ else:
 if (config['r9_comparative'] == False and 
     DATASETS.loc[config['sample'], 'WGA_source']):
     include: "rules/fast5_no_temp.smk"
-else:
+elif config['r9_comparative'] != "only":
     include: "rules/fast5.smk"
 
 ##### rules with run directive #####

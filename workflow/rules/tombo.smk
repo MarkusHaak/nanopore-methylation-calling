@@ -25,7 +25,8 @@ rule tombo_de_novo:
         reference = f"results/{config['sample']}/reference.fasta",
         single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/"
     output:
-        f"results/{config['sample']}/tombo/de_novo.runtime.txt"
+        f"results/{config['sample']}/tombo/de_novo.runtime.txt",
+        f"results/{config['sample']}/tombo/de_novo.valid_coverage.plus.wig"
     log:
         f"results/{config['sample']}/tombo/de_novo.log"
     conda:
@@ -61,7 +62,9 @@ rule tombo_alternative_model:
         reference = f"results/{config['sample']}/reference.fasta",
         single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/"
     output:
-        f"results/{config['sample']}/tombo/alt.runtime.txt"
+        f"results/{config['sample']}/tombo/alt.runtime.txt",
+        f"results/{config['sample']}/tombo/alt.6mA.valid_coverage.plus.wig",
+        f"results/{config['sample']}/tombo/alt.5mC.valid_coverage.plus.wig"
     log:
         f"results/{config['sample']}/tombo/alt.log"
     conda:
@@ -102,7 +105,8 @@ rule tombo_model_sample_compare:
         NAT_single_fast5_dir = f"results/{config['sample']}/NAT_guppy_canonical/single_fast5s/",
         wga_single_fast5_dir = f"results/{config['sample']}/WGA_guppy_canonical/single_fast5s/"
     output:
-        f"results/{config['sample']}/tombo/compare.runtime.txt"
+        f"results/{config['sample']}/tombo/compare.runtime.txt",
+        f"results/{config['sample']}/tombo/compare.valid_coverage.plus.wig"
     log:
         f"results/{config['sample']}/tombo/compare.log"
     conda:

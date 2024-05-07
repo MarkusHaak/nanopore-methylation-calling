@@ -17,7 +17,7 @@ rule modkit_auto_filter:
         start=`date +%s`
         mkdir -p results/{config[sample]}/modkit
         modkit pileup {input.bam} {output.bed} --log-filepath {log} \
-            --ref {input.reference} --only-tabs
+            --ref {input.reference} --only-tabs --force-allow-implicit
         end=`date +%s`
         runtime=$((end-start))
         echo $runtime > {output.runtime}
@@ -44,7 +44,7 @@ rule modkit_fixed_filter:
         modkit pileup {input.bam} {output.bed} --log-filepath {log} --ref {input.reference} \
             --filter-threshold C:{config[modkit_filter_threshold]} \
             --filter-threshold A:{config[modkit_filter_threshold]} \
-            --only-tabs
+            --only-tabs --force-allow-implicit
         end=`date +%s`
         runtime=$((end-start))
         echo $runtime > {output.runtime}
