@@ -44,7 +44,8 @@ def main(fast5_fn, pod5_fn, out_fn, out_dtype_fn):
                 tracking_id = read.get_tracking_id()
                 yaml.dump(tracking_id, ff)
                 context_tags = read.get_context_tags()
-                yaml.dump(context_tags, ff)
+                if context_tags:
+                    yaml.dump(context_tags, ff)
 
         with open(out_dtype_fn, "w") as f:
             print("fast5", file=f)

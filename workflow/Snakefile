@@ -273,7 +273,7 @@ else:
     include: "rules/stats_and_annotation.smk"
     include: "rules/tombo.smk"
 if (config['r9_comparative'] == False and 
-    DATASETS.loc[config['sample'], 'WGA_source']):
+    not pd.isna(DATASETS.loc[config['sample'], 'WGA_source'])):
     include: "rules/fast5_no_temp.smk"
 elif config['r9_comparative'] != "only":
     include: "rules/fast5.smk"
@@ -292,7 +292,7 @@ rule download_and_extract_raw_data:
         source = lambda wildcards: DATASETS.loc[config['sample'], f'{wildcards.raw_set}_source']
     run:
         import os
-        if params.source.startswith('http') and "tar.gz" in params.source:
+        if (params.source.startswith('http') or params.source.startswith('ftp')) and "tar.gz" in params.source:
             shell(
                 f"""
                 mkdir -p {output}
@@ -368,7 +368,7 @@ rule download_reference:
                     shell(
                         f"""
                         mkdir -p {output}
-                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/ 2>{log}
+                        scp -r -P {SSH_SERVERS.loc[alias, 'port']} -i {SSH_SERVERS.loc[alias, 'identity']} {SSH_SERVERS.loc[alias, 'user']}@{SSH_SERVERS.loc[alias, 'address']}:{fp_server} {output}/ 
                         """)
         elif '/' in params.source and os.path.exists(params.source):
             # assume local files

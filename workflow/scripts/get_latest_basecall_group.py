@@ -19,7 +19,7 @@ def main(fast5_fn, out_fn):
                     print(key,":",val)
                 #print('model_version_id :', attr.get('model_version_id'),',', 'time_stamp :', attr.get('time_stamp'))
     else:
-        print("ERROR: No fast5 input file provided.")
+        raise ValueError("ERROR: No fast5 input file provided.")
 
 
 if __name__ == '__main__':
@@ -34,7 +34,9 @@ if __name__ == '__main__':
                 fast5_fn = 'missing'
             else:
                 fast5_fn = fast5_fn[0]
-        elif not in_fn.endswith('.fast5'):
+        elif in_fn.endswith('.fast5'):
+            fast5_fn = sys.argv[1]
+        else:
             fast5_fn = 'missing'
         if len(sys.argv) > 2:
             out_fn = sys.argv[2]

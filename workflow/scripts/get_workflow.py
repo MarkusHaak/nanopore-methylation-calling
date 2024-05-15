@@ -24,16 +24,15 @@ def get_guppy_config_name(metadata_fn, guppy_workflows_fn):
     with open(metadata_fn, 'r') as f:
         meta = yaml.safe_load(f)
     flowcell = meta.get('flow_cell_product_code', None)
+    if flowcell:
+        flowcell = flowcell.upper() # guppy worklow entries are always uppercase
     sequencing_kit = meta.get('sequencing_kit', None)
+    if sequencing_kit:
+        sequencing_kit = sequencing_kit.upper() # guppy worklow entries are always uppercase
     if flowcell is None:
         print("WARNING: flow_cell_product_code field missing in fast5 (--> v2.0), assuming FLO-MIN106")
         flowcell = "FLO-MIN106"
-    
-    if flowcell is None:
-        raise ValueError("ERROR: flowcell not found in meta data")
-        #flowcell = "FLO-MIN106"
     elif (df.flowcell == flowcell).sum() == 0:
-        
         raise ValueError(f"WARNING: unknown flowcell {flowcell}")
         #flowcell = "FLO-MIN106"
     kit_known = True

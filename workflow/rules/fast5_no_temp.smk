@@ -9,13 +9,14 @@ rule sanitize:
     conda:
         "../envs/fast5api.yaml"
     threads: config['threads']
+    priority: 10
     params:
         any_fast5 = lambda wildcards, input: find_any_file(wildcards, filetype=".fast5", d=f"{input}")
     shell:
         ("""
         mkdir -p {output[0]}
         mkdir -p {output[1]}
-        x=$(python workflow/scripts/match_single_fast5.py "{params.any_fast5}")
+        x=$(python workflow/scripts/is_single_fast5.py "{params.any_fast5}")
         if [ "$x" = "True" ]; then
             single_to_multi_fast5 --input_path {input} --save_path {output[1]} --threads {threads} --recursive
             compress_fast5 -t {threads} --recursive -i {output[1]} -s {output[0]} -c vbz --sanitize
@@ -58,7 +59,7 @@ rule make_single_fast5s:
         config['threads']
     shell:
         ("""
-        x=$(python workflow/scripts/match_single_fast5.py "{params.any_fast5}")
+        x=$(python workflow/scripts/is_single_fast5.py "{params.any_fast5}")
         if [ "$x" = "True" ]; then
             cp -r {input} {output}
         else
