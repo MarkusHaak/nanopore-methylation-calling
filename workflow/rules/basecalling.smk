@@ -55,7 +55,7 @@ rule guppy_canonical:
     output:
         temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/workspace/")),
         temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/pass/")),
-        temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/fail/")),
+        fail = temp(directory(f"results/{config['sample']}/{{raw_set}}_guppy_canonical/fail/")),
         runtime = f"results/{config['sample']}/{{raw_set}}_guppy_canonical/runtime.txt"
     log:
         f"results/{config['sample']}/{{raw_set}}_guppy_canonical/guppy.log"
@@ -90,6 +90,9 @@ rule guppy_canonical:
                         -s results/{config[sample]}/{wildcards.raw_set}_guppy_canonical/ \
                         -c {params.config} --recursive -x 'cuda:0' --fast5_out 2>&1 | tee -a {log}
                 fi
+                if [ ! -d "{output.fail}" ]; then
+                    mkdir -p {output.fail}
+                fi
             fi
         fi
         end=`date +%s`
@@ -108,7 +111,7 @@ rule guppy_modified:
         f"results/{config['sample']}/raw_dtype.txt"
     output:
         temp(directory(f"results/{config['sample']}/NAT_guppy_modified/pass/")),
-        temp(directory(f"results/{config['sample']}/NAT_guppy_modified/fail/")),
+        fail = temp(directory(f"results/{config['sample']}/NAT_guppy_modified/fail/")),
         runtime = f"results/{config['sample']}/NAT_guppy_modified/runtime.txt"
     log:
         f"results/{config['sample']}/NAT_guppy_modified/guppy.log"
@@ -141,6 +144,9 @@ rule guppy_modified:
                     resources/ont-guppy/bin/guppy_basecaller -i {params.raw_dir} \
                         -s results/{config[sample]}/NAT_guppy_modified/ \
                         -c {params.mods} --recursive -x 'cuda:0' --bam_out 2>&1 | tee -a {log}
+                fi
+                if [ ! -d "{output.fail}" ]; then
+                    mkdir -p {output.fail}
                 fi
             fi
         fi
